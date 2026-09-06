@@ -1,0 +1,56 @@
+[
+ {
+  "name": "01_horn",
+  "prompt": "A deep low ship horn sounding once across open water, long and mournful, with a faint harbour reverb tail and gentle water lapping underneath",
+  "duration": 4.0,
+  "influence": 0.5,
+  "sentence": 1,
+  "offset": 0.2,
+  "volume": 0.48
+ },
+ {
+  "name": "02_bell",
+  "prompt": "An old mechanical warning bell ringing steadily on a bridge, bright metallic clanging at a regular pace, outdoors with a little open-air echo",
+  "duration": 3.5,
+  "influence": 0.5,
+  "sentence": 2,
+  "offset": 0.15,
+  "volume": 0.45
+ },
+ {
+  "name": "03_gears",
+  "prompt": "A large slow gear train engaging under heavy load, deep metallic meshing and a steady low grinding rotation, massive and unhurried",
+  "duration": 4.0,
+  "influence": 0.55,
+  "sentence": 18,
+  "offset": -0.1,
+  "volume": 0.52
+ },
+ {
+  "name": "04_bolts",
+  "prompt": "Four heavy steel bolts sliding out of their housings and seating hard into sockets, solid metallic scrape then a decisive clunk, close and dry",
+  "duration": 3.5,
+  "influence": 0.55,
+  "sentence": 23,
+  "offset": 0.1,
+  "volume": 0.55
+ },
+ {
+  "name": "05_steam",
+  "prompt": "A Victorian steam engine room: a beam engine turning steadily, rhythmic hiss of steam escaping, a coal fire crackling and brass valves ticking",
+  "duration": 5.0,
+  "influence": 0.5,
+  "sentence": 24,
+  "offset": 0.15,
+  "volume": 0.48
+ },
+ {
+  "name": "06_harbour",
+  "prompt": "A calm harbour on a bright afternoon: gentle water against a quay, distant gulls, a light breeze and faint rigging clinking, no voices",
+  "duration": 5.0,
+  "influence": 0.42,
+  "sentence": 29,
+  "offset": -0.2,
+  "volume": 0.42
+ }
+]

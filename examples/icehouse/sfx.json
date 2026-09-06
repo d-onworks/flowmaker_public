@@ -1,0 +1,56 @@
+[
+ {
+  "name": "01_ice_saw",
+  "prompt": "A long hand saw cutting through thick river ice in the cold open air, slow rhythmic rasping strokes, then a deep cracking snap as a heavy slab breaks free and shifts in the water",
+  "duration": 4.0,
+  "influence": 0.55,
+  "sentence": 2,
+  "offset": 0.2,
+  "volume": 0.5
+ },
+ {
+  "name": "02_drain",
+  "prompt": "Water trickling steadily down a stone channel and out through a small drain into the open, clean thin running stream on wet granite, close and quiet, no echo",
+  "duration": 3.5,
+  "influence": 0.5,
+  "sentence": 9,
+  "offset": -0.1,
+  "volume": 0.48
+ },
+ {
+  "name": "03_stone",
+  "prompt": "Two heavy cut granite blocks being lowered and seated against each other, a deep gritty stone-on-stone grind settling into a solid low thud, close and dry",
+  "duration": 3.5,
+  "influence": 0.55,
+  "sentence": 12,
+  "offset": 0.15,
+  "volume": 0.52
+ },
+ {
+  "name": "04_draught",
+  "prompt": "A low soft draught of air drawing steadily up through a narrow stone shaft, a faint hollow whistling breath rising and passing away, very quiet and airy",
+  "duration": 4.0,
+  "influence": 0.45,
+  "sentence": 15,
+  "offset": 0.1,
+  "volume": 0.45
+ },
+ {
+  "name": "05_straw",
+  "prompt": "Handfuls of dry straw and rice husks being pushed and packed into gaps by hand, dense dry rustling and crackling, then a heavy block of ice set down onto it with a dull scrape",
+  "duration": 4.0,
+  "influence": 0.5,
+  "sentence": 22,
+  "offset": 0.2,
+  "volume": 0.48
+ },
+ {
+  "name": "06_summer",
+  "prompt": "A quiet open summer field in the late afternoon: warm cicadas singing steadily in the distance and a soft breeze moving through dry grass, no voices, no traffic",
+  "duration": 5.0,
+  "influence": 0.42,
+  "sentence": 29,
+  "offset": -0.3,
+  "volume": 0.42
+ }
+]

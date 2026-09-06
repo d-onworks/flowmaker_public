@@ -1,0 +1,211 @@
+[
+ {
+  "n": 1,
+  "len": 6,
+  "kind": "real",
+  "sentences": [
+   1
+  ],
+  "desc": "훅 — 여름 들판의 흙언덕과 돌문",
+  "prompt": "A long low grass-covered earth mound sitting alone in an open field in high summer, with a single arched doorway of cut granite set into one end, the opening dark and cold looking. Small square stone shafts stand along the top of the mound. The camera pushes in slowly toward the dark arched opening while heat shimmers over the grass. Photoreal restrained documentary grade, natural daylight, muted palette of weathered grey granite, dry earth and green grass. No people in frame. No text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 2,
+  "len": 8,
+  "kind": "hist",
+  "sentences": [
+   2,
+   3
+  ],
+  "desc": "겨울 강에서 얼음을 잘라 온다",
+  "prompt": "A frozen river in deep winter. Workers saw and lever thick slabs of ice out of the open black water with long iron hooks and poles, then drag the slabs away across the ice on low wooden sleds. Pale overcast daylight, breath steaming in the cold. The camera watches from the side. Photoreal restrained documentary grade in the look of pre-modern Korea, overcast daylight or dim lamplight, muted earth palette of hemp, straw, dark timber and weathered grey granite. People wear thick padded plain hemp and indigo robes with straw shoes, fully clothed, no bare skin. Faces are turned away or out of frame. No text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 3,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   4,
+   5
+  ],
+  "desc": "두껍게 덮어도 녹는다",
+  "prompt": "Clean 3D CG cutaway diagram of a stack of pale translucent ice blocks inside a stone vault, buried under a thick heavy blanket of covering material. Everything except the ice is matte grey. Even under the heavy cover the blocks slowly shrink and water runs down off them onto the floor below. The camera holds still on the stack. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 4,
+  "len": 6,
+  "kind": "diag",
+  "sentences": [
+   6
+  ],
+  "desc": "고인 물이 남은 얼음을 갉아먹는다",
+  "prompt": "Clean 3D CG cutaway diagram, close low view along a completely flat vault floor. Water has gathered into a standing pool that rises around the base of the pale translucent ice blocks, and where the water touches them the blocks are eaten away into a deep notch. Everything except the ice is matte grey. The camera holds close and still on the waterline. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 5,
+  "len": 10,
+  "kind": "diag",
+  "sentences": [
+   7,
+   8
+  ],
+  "desc": "★첫 번째 답 — 바닥을 기울이고 배수구를 뚫는다",
+  "prompt": "Clean 3D CG cutaway diagram of the stone vault shown in section. The flat floor tilts down toward one end, and at the lowest end a narrow channel opens through the wall to the outside. Water running off the pale translucent ice blocks flows down the slope and away along the channel instead of collecting. Thin plain white arrows follow the water down the slope and out. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 6,
+  "len": 4,
+  "kind": "diag",
+  "sentences": [
+   9
+  ],
+  "desc": "밖으로 곧바로 빠져나간다",
+  "prompt": "Clean 3D CG diagram, close view from outside the vault wall at ground level, where a small square drain opening lets a steady thin stream of water run out and away from the building. Nothing pools anywhere on the ground. The camera holds close and still on the opening. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 7,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   10,
+   11
+  ],
+  "desc": "평평한 천장에서는 더운 공기가 되돌아온다",
+  "prompt": "Clean 3D CG cutaway diagram of a stone vault in section with a completely flat ceiling. Faint pale wisps rise from the floor to the flat ceiling, spread sideways along it and roll back down onto the pale translucent blocks below in a closed loop. Thin plain white arrows trace the loop. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 8,
+  "len": 6,
+  "kind": "diag",
+  "sentences": [
+   12
+  ],
+  "desc": "무지개 아치를 여러 겹 이어 쌓는다",
+  "prompt": "Clean 3D CG diagram of semicircular stone arches, each built of cut wedge blocks, being set up one behind another at even spacing until they form a long tunnel ceiling. The camera drifts slowly along the row of arches as they rise. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 9,
+  "len": 4,
+  "kind": "diag",
+  "sentences": [
+   13
+  ],
+  "desc": "아치와 아치 사이의 움푹한 홈",
+  "prompt": "Clean 3D CG cutaway diagram looking up at the ceiling from inside the vault, showing that between each pair of neighbouring arches the ceiling is recessed into a deep hollow pocket. The camera pushes in slowly on one hollow. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 10,
+  "len": 4,
+  "kind": "diag",
+  "sentences": [
+   14
+  ],
+  "desc": "★더운 공기가 홈에 갇힌다",
+  "prompt": "Clean 3D CG cutaway diagram in section. Faint pale wisps rise from the floor, reach the arched ceiling and collect inside the deep hollow between two arches, filling it and staying trapped there instead of spreading back down. Thin plain white arrows show the wisps rising into the hollow. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 11,
+  "len": 4,
+  "kind": "diag",
+  "sentences": [
+   15
+  ],
+  "desc": "홈마다 뚫린 구멍으로 빠져나간다",
+  "prompt": "Clean 3D CG cutaway diagram in section of a long stone tunnel vault built from semicircular arches, seen from the side so the whole ceiling is visible. Directly above the deep hollow between two neighbouring arches, a narrow square shaft cuts up through the thick roof to the open air. Pale wisps gathered in the hollow rise up through that shaft and drift away above the roof. Thin plain white arrows follow them up and out. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 12,
+  "len": 10,
+  "kind": "diag",
+  "sentences": [
+   16,
+   17,
+   18
+  ],
+  "desc": "★★시그니처 — 물은 아래로, 공기는 위로",
+  "prompt": "Clean 3D CG cutaway diagram of the whole vault in one wide section. Water runs down the sloping floor and out through the drain at the bottom, while pale wisps rise into the ceiling hollows and out through the roof shafts at the top. Two sets of thin plain white arrows move in opposite directions, downward and upward, and the pale translucent ice blocks sit untouched in the middle. The camera holds wide and still. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 13,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   19,
+   20
+  ],
+  "desc": "지붕을 흙과 석회로 덮는다",
+  "prompt": "Clean 3D CG cutaway diagram in section showing the roof being built up in layers over the stone arches: first a thick layer of packed earth, then a smooth sealing coat spread over that, until the whole vault is buried under a rounded mound. The camera holds still as the layers stack up. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 14,
+  "len": 4,
+  "kind": "diag",
+  "sentences": [
+   21
+  ],
+  "desc": "바닥은 땅 밑으로 내려앉는다",
+  "prompt": "Clean 3D CG cutaway diagram with the ground cut away in section: the floor of the vault sits well below the outside ground level, and a flight of steps leads down from the doorway into it. Nothing in the scene moves at all. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 15,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   22
+  ],
+  "desc": "얼음 사이에 짚과 왕겨를 채운다",
+  "prompt": "Clean 3D CG cutaway diagram, close view of courses of pale translucent ice blocks stacked inside a stone vault, with a thick layer of loose straw and husks packed between every course and pressed into every gap, more husks trickling down to fill the joints. Everything except the ice is matte grey. The camera holds close and still. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 16,
+  "len": 4,
+  "kind": "diag",
+  "sentences": [
+   23
+  ],
+  "desc": "서빙고 — 천장까지 쌓인 얼음",
+  "prompt": "Clean 3D CG cutaway diagram of a very long stone vault shown in section, packed floor to ceiling with rows of pale translucent ice blocks receding far into the distance. Everything except the ice is matte grey. The camera tracks slowly along the vault. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 17,
+  "len": 6,
+  "kind": "hist",
+  "sentences": [
+   24
+  ],
+  "desc": "녹아버린 얼음 — 관원이 벌을 받는다",
+  "prompt": "A dim stone ice store where the stacked ice has slumped and half melted, standing water across the floor. An official in a dark robe and a black horsehair hat stands looking down at the water with his back to the camera, and a clerk beside him writes on a paper scroll. The camera holds still. Photoreal restrained documentary grade in the look of pre-modern Korea, overcast daylight or dim lamplight, muted earth palette of hemp, straw, dark timber and weathered grey granite. People wear thick padded plain hemp and indigo robes with straw shoes, fully clothed, no bare skin. Faces are turned away or out of frame. No text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 18,
+  "len": 10,
+  "kind": "diag",
+  "sentences": [
+   25,
+   26
+  ],
+  "desc": "가장 오래된 얼음 창고 — 흙구덩이와 나무 지붕",
+  "prompt": "Clean 3D CG cutaway diagram of a deep rectangular pit dug into the ground, shown in section, roofed over with heavy timber beams and a thick layer of thatch. Rows of pale translucent ice blocks sit stacked at the bottom of the pit well below ground level. Everything except the ice is matte grey. The camera pushes in slowly on the section. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 19,
+  "len": 10,
+  "kind": "hist",
+  "sentences": [
+   27,
+   28
+  ],
+  "desc": "★킥 — 얼음이 병자와 죄수에게 간다",
+  "prompt": "Two shots joined by a simple cut. First a man carries a straw-wrapped block of ice through a wooden gate into a summer courtyard and sets it down beside a low sickbed where someone lies under a thin cover. Then the same straw-wrapped ice is passed through the heavy wooden bars of a prison cell to a hand reaching out from the dark inside. Warm hazy summer light. Photoreal restrained documentary grade in the look of pre-modern Korea, overcast daylight or dim lamplight, muted earth palette of hemp, straw, dark timber and weathered grey granite. People wear thick padded plain hemp and indigo robes with straw shoes, fully clothed, no bare skin. Faces are turned away or out of frame. No text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 20,
+  "len": 6,
+  "kind": "real",
+  "sentences": [
+   29
+  ],
+  "desc": "지금도 그 자리에 서 있다",
+  "prompt": "Two shots joined by a simple cut. First the outside of a long grass-covered earth mound in an open field in low late afternoon light, with a doorway of cut granite set into its end under a low half-round arch, and short square stone shafts standing along the top of the mound. Then the view from inside looking out through that same doorway: the ceiling overhead is one smooth continuous half-round barrel of stacked stone blocks curving like the inside of a tunnel, plain and unribbed, leading toward the bright opening. Photoreal restrained documentary grade, natural daylight, muted palette of weathered grey granite, dry earth and green grass. No people in frame. No text, no captions, no watermark, no UI, no logo."
+ }
+]

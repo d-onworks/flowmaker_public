@@ -1,0 +1,211 @@
+[
+ {
+  "n": 1,
+  "len": 6,
+  "kind": "real",
+  "sentences": [
+   1
+  ],
+  "desc": "훅 — 강 위의 다리가 갈라지기 시작한다",
+  "prompt": "A wide view of a large twin-towered stone and steel bridge over a broad grey river in overcast daylight. The flat roadway across the middle begins to split at the centre and the two halves start tilting upward. The camera holds still and wide. Photoreal restrained documentary grade, natural daylight, muted palette of weathered stone, painted steel and grey river water. No people in frame. No text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 2,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   2,
+   3
+  ],
+  "desc": "다리 한 짝이 통째로 선다",
+  "prompt": "Clean 3D CG diagram of a bridge roadway span between two piers, seen square from the side. The two halves of the span rotate upward from their inner ends until they stand steeply apart, leaving a wide open gap in the middle. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 3,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   4,
+   5
+  ],
+  "desc": "들어올리는 게 아니다",
+  "prompt": "Clean 3D CG diagram of a heavy slab being hoisted straight up by cables from above, straining, and then the cables and hoist fade away and the same slab instead pivots up from one end like a lid. Thin plain white arrows show the two different motions. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 4,
+  "len": 4,
+  "kind": "diag",
+  "sentences": [
+   6
+  ],
+  "desc": "기울인다",
+  "prompt": "Clean 3D CG diagram, close side view of a flat slab resting on a small pivot block near one end. The slab tips smoothly about that pivot so one end rises and the other end dips. The camera holds close and still on the pivot. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 5,
+  "len": 6,
+  "kind": "diag",
+  "sentences": [
+   7
+  ],
+  "desc": "배스큘 = 시소",
+  "prompt": "Clean 3D CG diagram of a simple seesaw plank balanced on a low fulcrum, rocking gently up and down, then the plank thickens and lengthens into a bridge roadway span still rocking on the same fulcrum. The camera holds still and square to the side. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 6,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   8,
+   9
+  ],
+  "desc": "회전축이 한쪽으로 치우쳐 있다",
+  "prompt": "Clean 3D CG cutaway diagram of one bridge roadway span shown square from the side, sliced so the pivot shaft inside the pier is visible as a round bearing. The pivot sits far from the middle of the roadway span, so the part reaching out over the water is long and the part behind the pivot is short. Thin plain white brackets mark the long side and the short side. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 7,
+  "len": 6,
+  "kind": "diag",
+  "sentences": [
+   10
+  ],
+  "desc": "짧은 쪽 끝에 균형추를 매단다",
+  "prompt": "Clean 3D CG cutaway diagram of a bridge pier sliced open so the deep empty chamber inside it is visible below the roadway. A large solid block is already fixed to the short arm behind the pivot, hanging inside that chamber with clear space all around it, and the whole arm with the block swings gently as one piece about the pivot. The roadway above stays whole and undamaged throughout. The camera holds still on the chamber. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 8,
+  "len": 6,
+  "kind": "diag",
+  "sentences": [
+   11,
+   12
+  ],
+  "desc": "균형추가 훨씬 작다",
+  "prompt": "Clean 3D CG diagram showing the long bridge roadway span and the counterweight block side by side on a plain ground plane, with nothing else in frame, so their very different sizes can be compared directly. The camera drifts slowly across from the huge roadway span to the much smaller block. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 9,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   13,
+   14
+  ],
+  "desc": "★시소는 무게가 아니라 무게 곱하기 거리로 겨룬다",
+  "prompt": "Clean 3D CG diagram of a balance beam on a central fulcrum. A small block sits far out on one arm and a large block sits close in on the other arm, and the beam hangs perfectly level between them. Thin plain white brackets run along each arm from the fulcrum to its block, one long and one short. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 10,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   15,
+   16
+  ],
+  "desc": "★★시그니처 — 값이 맞아떨어진다",
+  "prompt": "Clean 3D CG cutaway diagram of the whole bridge roadway span and its counterweight in one wide section, the pivot at the centre of the frame. The roadway span and the counterweight settle into perfect balance and the roadway span hangs level and motionless. Thin plain white brackets mark the two arm lengths. The camera holds wide and still. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 11,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   17,
+   18
+  ],
+  "desc": "남는 건 마찰뿐 — 작은 모터로 세운다",
+  "prompt": "Clean 3D CG cutaway diagram in section. A small toothed gear at the bridge pivot meshes with a large curved toothed rack fixed under the flat roadway span, and turns slowly, and the long straight roadway with its railings swings smoothly upward about the pivot. The span is a flat rigid deck of riveted steel plate with straight parallel edges. Thin plain white arrows show the small gear turning and the heavy roadway rising. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 12,
+  "len": 10,
+  "kind": "diag",
+  "sentences": [
+   19,
+   20,
+   21
+  ],
+  "desc": "★한 번 더 뒤집는다 — 일부러 안 맞춘다",
+  "prompt": "Clean 3D CG diagram of the balance beam again, level at first. A thin extra sliver is added onto the long arm and the beam tips slightly down on that side and stays there, settled and still. The camera holds close and still on the beam. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 13,
+  "len": 6,
+  "kind": "diag",
+  "sentences": [
+   22
+  ],
+  "desc": "저절로 닫힌 채 버틴다",
+  "prompt": "Clean 3D CG cutaway diagram of the bridge roadway span in section, lowered flat across the gap and resting there. Nothing in the scene moves at all. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 14,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   23
+  ],
+  "desc": "빗장이 밀려 나와 도로를 붙잡는다",
+  "prompt": "Clean 3D CG cutaway diagram, close on the join where two bridge roadway spans meet, sliced open so the inside of the joint is visible. Long round bolts slide horizontally out of one roadway span and into matching sockets in the other, locking the two roadways together. The camera holds close and still on the bolts. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 15,
+  "len": 10,
+  "kind": "hist",
+  "sentences": [
+   24
+  ],
+  "desc": "증기로 눌러 압력을 저장해뒀다",
+  "prompt": "Inside a Victorian engine room of riveted iron and brass. A coal fire glows under a large boiler, a beam engine turns steadily, and a tall vertical ram rises slowly inside an iron cylinder as pressure is stored. Warm lamplight, steam drifting. The camera watches from the side. Photoreal restrained documentary grade in the look of Victorian London, overcast daylight or dim lamplight, muted earth palette of soot-darkened stone, riveted iron and brass. People wear long dark wool coats and flat caps, fully clothed, no bare skin. Faces are turned away or out of frame. No text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 16,
+  "len": 6,
+  "kind": "diag",
+  "sentences": [
+   25
+  ],
+  "desc": "지금은 전기로 — 원리는 그대로",
+  "prompt": "Clean 3D CG diagram of the same small toothed gear and curved toothed rack at the bridge pivot, now driven by a compact electric motor and a hydraulic cylinder beside it. The gear turns and the roadway span rises exactly as before. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 17,
+  "len": 8,
+  "kind": "hist",
+  "sentences": [
+   26
+  ],
+  "desc": "1894 — 다리가 처음 열린 날",
+  "prompt": "A Victorian riverside crowd in long dark wool coats and flat caps watching from the embankment as the roadway of a great twin-towered bridge lifts for the first time. Sooty air, tall ships waiting on the water. Faces are turned away toward the bridge. The camera watches from behind the crowd. Photoreal restrained documentary grade in the look of Victorian London, overcast daylight or dim lamplight, muted earth palette of soot-darkened stone, riveted iron and brass. People wear long dark wool coats and flat caps, fully clothed, no bare skin. Faces are turned away or out of frame. No text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 18,
+  "len": 8,
+  "kind": "diag",
+  "sentences": [
+   27
+  ],
+  "desc": "★킥 — 돛대가 이만큼 넘으면 다리가 열린다",
+  "prompt": "Clean 3D CG diagram of a sailing ship with a tall mast approaching a bridge span from the side. A thin plain white bracket stands beside the mast marking its height, and when the mast reaches past the top of the bracket the two halves of the span rise open and the ship glides through the gap. The camera is locked off. Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no harsh shadows. Flat precise technical documentary infographic look, not photorealistic, not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 19,
+  "len": 6,
+  "kind": "real",
+  "sentences": [
+   28
+  ],
+  "desc": "실제로 배가 지나간다",
+  "prompt": "A tall sailing ship with high masts moving slowly up a broad river and passing cleanly between the two raised halves of a large twin-towered bridge. Overcast daylight, calm grey water. The camera follows the ship from the side. Photoreal restrained documentary grade, natural daylight, muted palette of weathered stone, painted steel and grey river water. No people in frame. No text, no captions, no watermark, no UI, no logo."
+ },
+ {
+  "n": 20,
+  "len": 8,
+  "kind": "real",
+  "sentences": [
+   29
+  ],
+  "desc": "부산 영도대교 — 지금도 토요일마다",
+  "prompt": "A single-roadway span road bridge at a Korean harbour lifting its span upward on a bright afternoon, small fishing boats and harbour buildings behind it, the raised roadway standing against an open sky. The camera holds still and wide. Photoreal restrained documentary grade, natural daylight, muted palette of weathered stone, painted steel and grey river water. No people in frame. No text, no captions, no watermark, no UI, no logo."
+ }
+]

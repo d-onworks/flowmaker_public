@@ -1,0 +1,31 @@
+# 비밀 — .env 변형·토큰 파일 전부. 예시 파일만 남긴다
+.env
+.env.*
+!.env.example
+*_token.json
+auth.json
+*.key
+
+# 로그인 프로필이 저장소 안에 생기면 안 된다 (env.home() 이 거부하지만 이중 방어)
+.flowmaker/
+profile/
+
+# 사용자 작업물 — 프로젝트 폴더는 올리지 않는다 (영상·음성이 수 GB)
+projects/*
+!projects/.gitkeep
+
+# 미디어
+*.mp4
+*.mp3
+*.wav
+*.png
+
+# 파이썬
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# OS
+.DS_Store
