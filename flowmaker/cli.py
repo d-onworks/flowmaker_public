@@ -2,7 +2,8 @@
 """python3 -m flowmaker <명령> [프로젝트] [옵션]
 
 제작 순서 (AGENTS.md 의 절차와 같다)
-    doctor                      환경 점검 · 폰트 설치
+    setup                       clone 직후 한 번 — 파이썬 패키지 · 크로미엄 · ffmpeg · .env · 폰트를 깐다
+    doctor                      환경 점검 (깔지는 않는다 — 부족하면 `setup`)
     login                       Flow 로그인 (한 번) — 같은 창에서 생성 설정(동영상·9:16·출력 1개)을 맞춰 둔다
     new <이름> [--from moai]     프로젝트 폴더 만들기 (예시 복사 가능)
     check <프로젝트>             cuts.json 형식 + 그림체 정본 검사 (크레딧 0)
@@ -29,6 +30,19 @@ import sys
 from . import style
 from .env import REPO_ROOT
 from .project import Project, is_name, summary, validate_cuts
+
+
+def _utf8_stdout() -> None:
+    """윈도우 기본 코드페이지(cp949)에는 ✅❌⚠— 가 없다.
+
+    콘솔에 직접 찍을 때는 괜찮지만, 출력을 파일·파이프로 받으면(= 에이전트가 결과를 읽는 방식)
+    UnicodeEncodeError 로 죽는다. 그래서 출력 스트림을 utf-8 로 고정한다.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass            # pytest 캡처 등 reconfigure 가 없는 스트림
 
 
 def cmd_new(a):
@@ -105,10 +119,14 @@ def _positive(v: str) -> float:
 
 
 def main(argv=None) -> None:
+    _utf8_stdout()
     ap = argparse.ArgumentParser(prog="python3 -m flowmaker", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
+    s = sub.add_parser("setup")
+    s.add_argument("--no-ffmpeg", action="store_true", help="ffmpeg 설치를 건너뛴다")
+    s.add_argument("--dry-run", action="store_true", help="무엇을 실행할지 보여주기만 한다")
     sub.add_parser("doctor")
     sub.add_parser("login")
     s = sub.add_parser("new"); s.add_argument("project"); s.add_argument("--from", dest="from_example")
@@ -126,6 +144,9 @@ def main(argv=None) -> None:
     s = sub.add_parser("music"); s.add_argument("project"); s.add_argument("prompt"); s.add_argument("--seconds", type=int, default=100)
 
     a = ap.parse_args(argv)
+    if a.cmd == "setup":
+        from . import setup as setup_mod
+        sys.exit(0 if setup_mod.run(no_ffmpeg=a.no_ffmpeg, dry_run=a.dry_run) else 1)
     if a.cmd == "doctor":
         from . import doctor; sys.exit(0 if doctor.run() else 1)
     if a.cmd == "login":

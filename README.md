@@ -21,30 +21,55 @@
 
 ## 설치
 
-macOS / Linux
+**macOS · Windows · Linux 공통 — 두 줄이면 끝납니다.**
+
 ```bash
 git clone https://github.com/d-onworks/flowmaker_public.git
 cd flowmaker_public
+python3 -m flowmaker setup          # Windows PowerShell 은 py -3 -m flowmaker setup
+```
+
+`setup` 이 알아서 합니다 — 가상환경(`.venv`) 만들기 · 파이썬 패키지 · 플레이라이트 크로미엄 ·
+**ffmpeg**(macOS `brew` · Windows `winget`/`choco`/`scoop` · Linux `apt`/`dnf`/`pacman`) ·
+`.env` 복사 · 자막 폰트 내려받기 · 마지막에 환경 점검.
+
+끝나면 안내대로 가상환경을 켜고 로그인합니다.
+
+```bash
+source .venv/bin/activate           # Windows: .\.venv\Scripts\Activate.ps1
+# .env 를 열어 ELEVENLABS_API_KEY 를 채웁니다 (없어도 컷 생성까지는 됩니다)
+python3 -m flowmaker login          # 창이 뜨면 구글 로그인 (한 번만)
+```
+
+> `--dry-run` 을 붙이면 무엇을 실행할지 보여주기만 합니다. `--no-ffmpeg` 은 ffmpeg 설치를 건너뜁니다.
+> 윈도우에서 ffmpeg 을 방금 깔았다면 PATH 반영을 위해 **새 터미널**을 열고 `python -m flowmaker doctor` 로 확인하세요.
+> 패키지 관리자가 없어 ffmpeg 자동 설치가 안 되면 `setup` 이 받는 곳을 알려주고 나머지는 계속 진행합니다.
+
+<details>
+<summary>손으로 설치하기 (setup 을 쓰지 않을 때)</summary>
+
+macOS / Linux
+```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python3 -m playwright install chromium
-cp .env.example .env               # ELEVENLABS_API_KEY 를 채운다
-python3 -m flowmaker doctor        # 환경 점검 + 자막 폰트 내려받기
-python3 -m flowmaker login         # 창이 뜨면 구글 로그인 (한 번만)
+brew install ffmpeg                 # Ubuntu: sudo apt install ffmpeg
+cp .env.example .env
+python3 -m flowmaker doctor
 ```
 
 Windows (PowerShell)
 ```powershell
-git clone https://github.com/d-onworks/flowmaker_public.git
-cd flowmaker_public
 py -3 -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 py -3 -m playwright install chromium
-Copy-Item .env.example .env        # ELEVENLABS_API_KEY 를 채운다
+winget install --id Gyan.FFmpeg -e
+Copy-Item .env.example .env
 py -3 -m flowmaker doctor
-py -3 -m flowmaker login
 ```
-(아래 예시는 `python3` 로 쓴다. Windows 는 `py -3` 로 읽으면 된다.)
+</details>
+
+(아래 예시는 `python3` 로 씁니다. Windows 는 `py -3` 로 읽으면 됩니다.)
 
 `login` 창에서 로그인한 뒤, **프로젝트를 하나 열어 생성 설정을 '동영상 · 세로 9:16 · 출력 1개'로 한 번 맞춰 두세요.**
 Flow 가 계정별로 기억하므로 이후 자동 제출이 그 설정으로 나갑니다. 드라이버는 길이만 고르고, 칩에 `9:16` 이 안 보이면 경고합니다.

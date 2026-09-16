@@ -70,7 +70,8 @@ def run(project: Project) -> float:
             "-c:v", "libx264", "-preset", "medium", "-crf", "17", "-pix_fmt", "yuv420p", out, "-y")
         parts.append(out)
     lst = project.build / "list.txt"
-    lst.write_text("".join("file '" + str(p).replace("'", "'\\''") + "'\n" for p in parts))
+    lst.write_text("".join("file '" + str(p).replace("'", "'\\''") + "'\n" for p in parts),
+                   encoding="utf-8")
     silent = project.build / "video_silent.mp4"
     _ff("-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", silent, "-y")
 

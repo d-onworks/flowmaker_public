@@ -43,7 +43,7 @@ def synthesize(project: Project) -> dict:
 
     project.narration_raw.write_bytes(base64.b64decode(res["audio_base64"]))
     al = res.get("alignment") or res.get("normalized_alignment")
-    project.alignment.write_text(json.dumps(al, ensure_ascii=False))
+    project.alignment.write_text(json.dumps(al, ensure_ascii=False), encoding="utf-8")
     total = al["character_end_times_seconds"][-1]
     print(f"더빙 저장 · {model} · 글자 {len(flat)}자 · 원본 길이 {total:.2f}초 → {project.narration_raw.name}")
     return {"chars": len(flat), "seconds": total, "model": model}

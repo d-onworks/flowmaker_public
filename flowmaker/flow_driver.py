@@ -177,7 +177,7 @@ def submit(project: Project, length: int, only: set[int] | None = None, headless
     url = ""
 
     def save():
-        meta.write_text(json.dumps({"url": url, "order": sent}, ensure_ascii=False))
+        meta.write_text(json.dumps({"url": url, "order": sent}, ensure_ascii=False), encoding="utf-8")
 
     from playwright.sync_api import sync_playwright
     with sync_playwright() as pw:
@@ -244,7 +244,7 @@ def collect(project: Project, length: int, headless: bool = False) -> int:
     meta_path = project.build / f"submit_{length}s.json"
     if not meta_path.exists():
         raise SystemExit(f"{meta_path.name} 이 없다 — 먼저 `submit {length}` 를 실행하라")
-    meta = json.loads(meta_path.read_text())
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
     url, order = meta["url"], meta["order"]
     if not order:
         raise SystemExit("제출된 컷이 없다 (order 비어 있음)")
@@ -291,7 +291,7 @@ def collect(project: Project, length: int, headless: bool = False) -> int:
         urllib.request.urlretrieve(u, dst)
         got[n] = _duration(dst)
         _log(f"  C{n:02d} ← {got[n]:.2f}s")
-    (project.build / f"collected_{length}s.json").write_text(json.dumps(got))
+    (project.build / f"collected_{length}s.json").write_text(json.dumps(got), encoding="utf-8")
     _log(f"[{length}s] 회수 {len(got)}/{len(order)}")
     return len(got)
 

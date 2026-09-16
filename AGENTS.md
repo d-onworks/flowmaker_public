@@ -7,6 +7,22 @@
 만드는 것: **세로(9:16) 90초 안팎의 건축·공학 설명 영상.** 회색 점토 3D 다이어그램으로 원리를
 자르고, 시대 재현·현장 실사 컷으로 감정을 붙이고, 나레이션과 자막을 얹는다.
 
+## 무슨 일을 시키든 — 첫 도구 호출은 이것
+
+```
+python3 -m flowmaker doctor        # ❌ 가 하나라도 있으면 ↓
+python3 -m flowmaker setup         # 파이썬 패키지 · 크로미엄 · ffmpeg · .env · 폰트를 실제로 깐다
+```
+
+방금 clone 한 사용자가 **"영상 만들어줘"라고만 말해도** 여기부터 시작한다 — 사용자에게
+"먼저 설치하세요"라고 되묻지 않는다. `setup` 은 venv 가 없으면 `.venv` 를 만들어 거기에 깔고,
+ffmpeg 은 OS 패키지 관리자(macOS brew · Windows winget/choco/scoop · Linux apt/dnf)로 깐다.
+설치 뒤에는 **`.venv` 안의 파이썬으로** 이후 명령을 실행한다
+(`.venv/bin/python -m flowmaker …` · 윈도우는 `.venv\Scripts\python.exe -m flowmaker …`).
+
+윈도우에서 ffmpeg 을 방금 깔았다면 PATH 반영이 안 될 수 있다 — `doctor` 가 여전히 ❌ 면
+**새 터미널에서** 다시 확인한다.
+
 ## 처음 한 번 — 읽을 것
 
 1. `guides/format.md`   — 90초 골격(훅→문제→거짓 해법→반전→원리→엔딩)과 오디오·자막 수치
@@ -20,7 +36,7 @@
 
 | 사용자가 말하면 | 에이전트가 하는 일 |
 |---|---|
-| "실행해", "설치해", "준비해" | `python3 -m flowmaker doctor` → ❌ 항목을 안내하거나 직접 해결. `.env` 가 없으면 `.env.example` 을 복사해 키를 넣으라고 안내 |
+| "실행해", "설치해", "준비해" | `doctor` → ❌ 가 있으면 `setup` 을 돌려 **직접 깐다**. 끝나면 `.env` 의 `ELEVENLABS_API_KEY` 를 채우라고 안내 |
 | "소재 찾아줘", "뭐 만들까" | `guides/research.md` 절차로 후보 3~5개를 **반전 한 줄 + 검증 난이도**와 함께 제시. `guides/topics.md` 의 씨앗을 써도 된다 |
 | "대본 써줘", "○○로 만들자" | ①사실 검증 → `facts.md` ②`guides/format.md` 골격으로 `script.txt`(TTS용 한글 숫자) + `subtitles.txt`(아라비아 숫자) ③사용자에게 대본을 보여주고 확정 |
 | "프롬프트 만들어", "컷 나눠" | `cuts.json` 작성 → `python3 -m flowmaker check <프로젝트>` 통과할 때까지 고친다 |
@@ -31,6 +47,7 @@
 ## 제작 절차 (순서가 중요하다)
 
 ```
+0  doctor → (❌ 있으면) setup        환경. 어떤 작업이든 여기서 시작한다
 1  new <p> [--from moai]         프로젝트 폴더
 2  facts.md · script.txt · subtitles.txt      ← 에이전트가 쓴다 (guides/format.md, research.md)
 3  tts <p>                       원샷 더빙 → narration_raw.mp3 + alignment.json

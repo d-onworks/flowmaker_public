@@ -28,14 +28,15 @@ def run(install_font: bool = True) -> bool:
     print("환경 점검")
     line(sys.version_info >= (3, 10), f"python {sys.version.split()[0]}", "3.10 이상 필요")
     line(bool(shutil.which("ffmpeg")) and bool(shutil.which("ffprobe")), "ffmpeg / ffprobe",
-         "macOS: brew install ffmpeg · Ubuntu: sudo apt install ffmpeg · Windows: ffmpeg.org 에서 받아 PATH 에")
+         "`python -m flowmaker setup` 이 깔아준다 "
+         "(직접: macOS brew install ffmpeg · Windows winget install Gyan.FFmpeg · Ubuntu sudo apt install ffmpeg)")
     try:
         import PIL  # noqa: F401
         have_pil = True
         line(True, "pillow")
     except ImportError:
         have_pil = False
-        line(False, "pillow", "pip install -r requirements.txt")
+        line(False, "pillow", "python -m flowmaker setup")
     try:
         from playwright.sync_api import sync_playwright  # noqa: F401
         line(True, "playwright (파이썬 패키지)")
@@ -44,9 +45,9 @@ def run(install_font: bool = True) -> bool:
                 b = pw.chromium.launch(headless=True); b.close()
             line(True, "playwright 크로미엄")
         except Exception:
-            line(False, "playwright 크로미엄", "python3 -m playwright install chromium")
+            line(False, "playwright 크로미엄", "python -m flowmaker setup")
     except ImportError:
-        line(False, "playwright", "pip install -r requirements.txt && python3 -m playwright install chromium")
+        line(False, "playwright", "python -m flowmaker setup")
 
     if have_pil:
         from . import subtitles          # PIL 이 있을 때만 — 없으면 import 자체가 죽는다
@@ -62,11 +63,11 @@ def run(install_font: bool = True) -> bool:
          "더빙·효과음에 필요. .env 에 ELEVENLABS_API_KEY=… — 없어도 대본·컷 계획·Flow 생성·검수까지는 된다", required=False)
     prof = env.home() / "profile"
     line(prof.exists() and any(prof.iterdir()), "Flow 로그인 프로필",
-         "python3 -m flowmaker login  (창이 뜨면 구글 로그인 — Flow 생성에 필요)", required=False)
+         "python -m flowmaker login  (창이 뜨면 구글 로그인 — Flow 생성에 필요)", required=False)
 
     print()
     if not required_ok:
-        print("위 ❌ 항목을 해결한 뒤 다시 `doctor` 를 실행하라.")
+        print("`python -m flowmaker setup` 을 실행하면 대부분 자동으로 깔린다.")
     elif notes:
         print("필수 도구는 준비됐다. 아직 안 되는 단계:")
         for n in notes:
