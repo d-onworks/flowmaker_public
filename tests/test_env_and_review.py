@@ -17,6 +17,7 @@ def test_home_refuses_repo_inside(monkeypatch):
 
 def test_home_expands_tilde(monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))   # 윈도우는 ~ 를 USERPROFILE 로 푼다
     monkeypatch.setenv("FLOWMAKER_HOME", "~/fmhome")
     assert env.home() == (tmp_path / "fmhome").resolve()
 

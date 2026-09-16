@@ -95,19 +95,45 @@ def _refresh_path() -> None:
     os.environ["PATH"] = os.pathsep.join(cur)
 
 
+def _child_env() -> dict[str, str]:
+    """자식 파이썬도 utf-8 로 말하게 한다 — 윈도우 기본 cp949 로 나가면 한글이 깨진다."""
+    return {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+
+
 def _run(cmd: list[str], why: str, *, dry_run: bool, fatal: bool = True) -> bool:
     printable = " ".join(cmd)
-    print(f"\n▶ {why}\n  $ {printable}")
+    print(f"\n▶ {why}\n  $ {printable}", flush=True)
     if dry_run:
         print("  (--dry-run 이라 실행하지 않는다)")
         return True
     try:
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, env=_child_env())
         return True
     except (subprocess.CalledProcessError, FileNotFoundError, KeyboardInterrupt) as e:
         mark = "실패" if fatal else "실패(건너뜀)"
         print(f"  {mark}: {type(e).__name__} {e}")
         return False
+
+
+def make_venv(vdir: Path, dry_run: bool = False) -> Path | None:
+    """venv 를 만들고 그 안의 파이썬을 돌려준다. 끝내 못 만들면 None.
+
+    `python -m venv` 는 껍데기를 만든 뒤 ensurepip 으로 pip 을 넣는데, **pip 단계만 깨지는
+    윈도우가 있다** — PATH 에 못 읽는 항목이 하나라도 있으면 pip 이 WinError 448 로 죽는다
+    (실측: PATH 의 어떤 항목이 신뢰할 수 없는 탑재 지점이었다). 껍데기는 멀쩡하므로
+    `--without-pip` 로 다시 만들고 pip 만 따로 붙여 본다.
+    """
+    if _run([sys.executable, "-m", "venv", str(vdir)], ".venv 만들기", dry_run=dry_run, fatal=False):
+        return venv_python(vdir)
+    print("  pip 부트스트랩만 실패한 것일 수 있다 — pip 없이 만들고 따로 붙여 본다")
+    shutil.rmtree(vdir, ignore_errors=True)
+    if _run([sys.executable, "-m", "venv", "--without-pip", str(vdir)],
+            ".venv 만들기 (pip 제외)", dry_run=dry_run, fatal=False):
+        py = venv_python(vdir)
+        if _run([str(py), "-m", "ensurepip", "--default-pip"],
+                "venv 에 pip 붙이기", dry_run=dry_run, fatal=False):
+            return py
+    return None
 
 
 def run(no_ffmpeg: bool = False, dry_run: bool = False) -> bool:
@@ -117,6 +143,7 @@ def run(no_ffmpeg: bool = False, dry_run: bool = False) -> bool:
         return False
 
     ok = True
+    on_base_python = False
 
     # 1) 파이썬 환경 — venv 밖이면 저장소에 .venv 를 만들어 거기에 깐다
     if in_venv():
@@ -127,17 +154,28 @@ def run(no_ffmpeg: bool = False, dry_run: bool = False) -> bool:
         py = venv_python(vdir)
         if py.exists():
             print(f"\n기존 .venv 를 쓴다 → {py}")
+        elif dry_run:
+            print("\n가상환경(.venv) 이 없다 — 새로 만들 예정")
+            make_venv(vdir, dry_run=True)
+            py = Path(sys.executable)
         else:
             print("\n가상환경(.venv) 이 없다 — 시스템 파이썬을 더럽히지 않도록 새로 만든다")
-            if not _run([sys.executable, "-m", "venv", str(vdir)], ".venv 만들기", dry_run=dry_run):
-                return False
-            if dry_run:
-                py = Path(sys.executable)
+            made = make_venv(vdir)
+            if made is None:
+                # 가상환경은 편의일 뿐이다. 못 만들었다고 설치를 포기하지 않는다.
+                print("\n★ 가상환경을 못 만들었다 — 지금 쓰는 파이썬에 그대로 깐다.\n"
+                      "  (위 오류를 보라. 파이썬 설치가 깨졌거나 PATH 에 못 읽는 항목이 있는 경우다)")
+                py, on_base_python = Path(sys.executable), True
+            else:
+                py = made
 
     # 2) 파이썬 패키지
-    _run([str(py), "-m", "pip", "install", "--upgrade", "pip"],
+    # --no-warn-script-location: pip 이 "스크립트가 PATH 에 없다" 경고를 내려고 PATH 를 전부
+    # 훑는데, PATH 에 못 읽는 항목이 하나라도 있으면 거기서 죽는다(윈도우 WinError 448 실측).
+    pip_flags = ["--no-warn-script-location"]
+    _run([str(py), "-m", "pip", "install", *pip_flags, "--upgrade", "pip"],
          "pip 최신화", dry_run=dry_run, fatal=False)          # 실패해도 설치는 대개 된다
-    ok &= _run([str(py), "-m", "pip", "install", "-r", str(REPO_ROOT / "requirements.txt")],
+    ok &= _run([str(py), "-m", "pip", "install", *pip_flags, "-r", str(REPO_ROOT / "requirements.txt")],
                "파이썬 패키지 설치 (playwright · pillow)", dry_run=dry_run)
 
     # 3) 플레이라이트 브라우저
@@ -181,13 +219,17 @@ def run(no_ffmpeg: bool = False, dry_run: bool = False) -> bool:
     _run([str(py), "-c", "from flowmaker.subtitles import ensure_font; print(ensure_font())"],
          "자막 폰트(Pretendard) 확인·내려받기", dry_run=dry_run, fatal=False)
 
-    # 7) 최종 점검
+    # 7) 최종 점검 — ★판정은 doctor 가 한다.
+    # 중간 단계가 0 이 아니어도 목적은 이뤄진 경우가 있다(pip 이 다 깔고 마지막 경고에서 죽는 등).
+    # 실제로 쓸 수 있느냐만 본다.
     print("\n" + "─" * 60)
     if not dry_run:
-        r = subprocess.run([str(py), "-m", "flowmaker", "doctor"], cwd=REPO_ROOT)
-        ok = ok and r.returncode == 0
+        r = subprocess.run([str(py), "-m", "flowmaker", "doctor"], cwd=REPO_ROOT, env=_child_env())
+        if r.returncode == 0 and not ok:
+            print("\n(중간에 실패한 단계가 있었지만 점검은 통과했다 — 그대로 써도 된다)")
+        ok = r.returncode == 0
 
-    if not in_venv() and not dry_run:
+    if not in_venv() and not dry_run and not on_base_python:
         act = r".venv\Scripts\Activate.ps1" if sys.platform == "win32" else "source .venv/bin/activate"
         print(f"\n★ 이후 명령은 가상환경 안에서 실행하라:  {act}")
         print(f"  (또는 매번 `{py} -m flowmaker <명령>`)")

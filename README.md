@@ -13,8 +13,8 @@
 
 | 무엇 | 왜 | 어디서 |
 |---|---|---|
-| Python 3.10+ | 도구 실행 | python.org |
-| ffmpeg / ffprobe | 조립·검수 | macOS `brew install ffmpeg` · Ubuntu `apt install ffmpeg` · Windows ffmpeg.org |
+| Python 3.10+ | 도구 실행 | python.org (윈도우는 설치할 때 **Add python.exe to PATH** 를 꼭 켜세요) |
+| ffmpeg / ffprobe | 조립·검수 | **`setup` 이 깝니다** (직접 하려면 macOS `brew install ffmpeg` · Windows `winget install Gyan.FFmpeg` · Ubuntu `apt install ffmpeg`) |
 | Chrome (권장) | Flow 조작 | 없으면 플레이라이트 내장 크로미엄을 씁니다 |
 | **구글 Flow 크레딧** | 영상 생성 | Google AI Pro/Ultra 구독 크레딧(비구독 계정도 소량의 일일 크레딧이 있습니다). 한 편(20컷) ≈ 200~230 크레딧 — **Omni Flash · 720p 기준 실측**이며 모델·해상도·등급에 따라 다르니 Flow 화면의 현재 단가를 확인하세요 |
 | **ElevenLabs API 키** | 더빙·효과음 | https://elevenlabs.io 무료 플랜도 됩니다(월 10,000 크레딧 ≈ 6~10편). **무료 플랜은 비상업용** — 수익화하려면 유료 플랜. 배경음악 생성(`music`)은 **유료 플랜 전용**이라 무료면 음악 파일을 직접 넣습니다 |
@@ -26,7 +26,7 @@
 ```bash
 git clone https://github.com/d-onworks/flowmaker_public.git
 cd flowmaker_public
-python3 -m flowmaker setup          # Windows PowerShell 은 py -3 -m flowmaker setup
+python3 -m flowmaker setup          # Windows PowerShell 은 python -m flowmaker setup
 ```
 
 `setup` 이 알아서 합니다 — 가상환경(`.venv`) 만들기 · 파이썬 패키지 · 플레이라이트 크로미엄 ·
@@ -42,6 +42,18 @@ python3 -m flowmaker login          # 창이 뜨면 구글 로그인 (한 번만
 ```
 
 > `--dry-run` 을 붙이면 무엇을 실행할지 보여주기만 합니다. `--no-ffmpeg` 은 ffmpeg 설치를 건너뜁니다.
+> 패키지 관리자가 없어 ffmpeg 자동 설치가 안 되면 `setup` 이 받는 곳을 알려주고 나머지는 계속 진행합니다.
+
+<details>
+<summary>윈도우에서 막힐 때 (실측으로 확인된 것들)</summary>
+
+- **`py -3` 이 아무 말 없이 끝난다** — 런처가 버전을 못 찾는 상태입니다. `py -0` 으로 잡히는 버전을 보고 `py -3.12` 처럼 콕 집어 부르거나, 그냥 `python` 을 쓰세요.
+- **`python` 이 Microsoft Store 를 연다** — 0바이트짜리 가짜 실행파일(앱 실행 별칭)입니다. python.org 설치본을 **Add python.exe to PATH** 를 켜고 까세요.
+- **`.venv` 만들기가 pip 단계에서 실패한다** — `setup` 이 알아서 `--without-pip` 로 다시 만들고 pip 만 따로 붙여 봅니다. 그래도 안 되면 가상환경 없이 지금 파이썬에 깔고 계속 진행합니다. 설치 자체는 끝납니다.
+- **pip 이 `WinError 448 … 신뢰할 수 없는 탑재 지점` 으로 죽는다** — 파이썬이 아니라 **PATH 에 깨진 폴더가 섞인 것**입니다. 그 PC의 모든 pip 설치가 같이 깨집니다. `setup` 은 `--no-warn-script-location` 으로 피해 가지만, 근본 해결은 환경변수에서 그 항목을 지우는 것입니다.
+- **ffmpeg 을 방금 깔았는데 `doctor` 가 못 찾는다** — PATH 반영이 안 된 것입니다. **새 터미널**을 열고 다시 확인하세요.
+
+</details>
 > 윈도우에서 ffmpeg 을 방금 깔았다면 PATH 반영을 위해 **새 터미널**을 열고 `python -m flowmaker doctor` 로 확인하세요.
 > 패키지 관리자가 없어 ffmpeg 자동 설치가 안 되면 `setup` 이 받는 곳을 알려주고 나머지는 계속 진행합니다.
 
@@ -60,30 +72,30 @@ python3 -m flowmaker doctor
 
 Windows (PowerShell)
 ```powershell
-py -3 -m venv .venv; .\.venv\Scripts\Activate.ps1
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-py -3 -m playwright install chromium
+python -m playwright install chromium
 winget install --id Gyan.FFmpeg -e
 Copy-Item .env.example .env
-py -3 -m flowmaker doctor
+python -m flowmaker doctor
 ```
 </details>
 
-(아래 예시는 `python3` 로 씁니다. Windows 는 `py -3` 로 읽으면 됩니다.)
+(아래 예시는 `python3` 로 씁니다. Windows 는 `python` 으로 읽으면 됩니다.)
 
 `login` 창에서 로그인한 뒤, **프로젝트를 하나 열어 생성 설정을 '동영상 · 세로 9:16 · 출력 1개'로 한 번 맞춰 두세요.**
 Flow 가 계정별로 기억하므로 이후 자동 제출이 그 설정으로 나갑니다. 드라이버는 길이만 고르고, 칩에 `9:16` 이 안 보이면 경고합니다.
 
 키 없이 되는 범위: 소재·대본·컷 계획·`check`·Flow 생성·`review` 까지. 더빙(`tts`)·효과음(`sfx`)·조립부터는 ElevenLabs 키가 필요합니다.
 
-테스트를 돌리려면 `pip install -r requirements-dev.txt && python3 -m pytest`.
+테스트를 돌리려면 `pip install -r requirements-dev.txt && python3 -m pytest` (55개). macOS 15 / Windows 11(한국어·cp949) 양쪽에서 통과를 확인했습니다.
 
 ## 에이전트에게 말하기
 
 Claude Code 나 Codex 를 이 폴더에서 열고:
 
 ```
-실행해                → 환경 점검, 부족한 것 안내
+실행해                → 환경 점검, 부족한 건 알아서 설치
 소재 찾아줘           → 후보 3~5개 (반전 한 줄 + 검증 난이도)
 도개교로 만들자        → 사실 검증 → 대본 → 확인 요청
 영상 생성해           → 컷 계획 → 정본 검사 → Flow 제출 → 회수 → 검수
@@ -112,7 +124,7 @@ python3 -m flowmaker status bridge                  # 어디까지 됐나
 
 ```
 AGENTS.md            에이전트 지침 (사람도 읽으면 전체 절차가 보입니다)
-flowmaker/           도구 — style(그림체 정본·검사) · flow_driver(플레이라이트) · tts · timing · subtitles · sfx · assemble · review
+flowmaker/           도구 — style(그림체 정본·검사) · flow_driver(플레이라이트) · tts · timing · subtitles · sfx · assemble · review · setup/doctor(환경)
 guides/              지식 — format(90초 골격) · prompting(프롬프트 규칙) · research(소재·사실검증) · topics(씨앗 30) · flow-ui(화면 수리)
 examples/            완성 편 3개: moai(모아이) · icehouse(석빙고) · drawbridge(도개교) — 대본·자막·컷·프롬프트·사실검증
 projects/            내 작업물 (git 에 올라가지 않음)
