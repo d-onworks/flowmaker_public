@@ -11,6 +11,12 @@
 #   · `py -3` 이 아무 말 없이 끝나는 런처가 있다
 # 그래서 후보를 "실제로 실행해 버전을 찍어보고" 고른다.
 $ErrorActionPreference = "Continue"
+
+# PowerShell 이 직접 찍는 줄도 utf-8 로 — 안 하면 출력을 파일·파이프로 받을 때(에이전트가
+# 결과를 읽는 방식) 한글이 cp949 로 나가 깨진다. 파이썬 쪽은 setup 이 따로 고정한다.
+try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false } catch { }
+$OutputEncoding = New-Object System.Text.UTF8Encoding $false
+
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $repo
 

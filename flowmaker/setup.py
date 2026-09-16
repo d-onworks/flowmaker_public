@@ -115,6 +115,20 @@ def _run(cmd: list[str], why: str, *, dry_run: bool, fatal: bool = True) -> bool
         return False
 
 
+def has_pip(py: Path) -> bool:
+    """이 파이썬으로 pip 을 부를 수 있나. 남아 있던 반쪽 venv 를 걸러낸다."""
+    try:
+        return subprocess.run([str(py), "-m", "pip", "--version"],
+                              capture_output=True, timeout=60).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def base_python() -> Path:
+    """venv 안에서 돌고 있을 때 그 venv 를 만든 원래 파이썬."""
+    return Path(getattr(sys, "_base_executable", None) or sys.executable)
+
+
 def make_venv(vdir: Path, dry_run: bool = False) -> Path | None:
     """venv 를 만들고 그 안의 파이썬을 돌려준다. 끝내 못 만들면 None.
 
@@ -133,6 +147,9 @@ def make_venv(vdir: Path, dry_run: bool = False) -> Path | None:
         if _run([str(py), "-m", "ensurepip", "--default-pip"],
                 "venv 에 pip 붙이기", dry_run=dry_run, fatal=False):
             return py
+    # ★pip 없는 반쪽 venv 를 남기면 다음 실행이 그걸 골라 더 이상한 곳에서 깨진다. 지우고 간다.
+    if not dry_run:
+        shutil.rmtree(vdir, ignore_errors=True)
     return None
 
 
@@ -149,11 +166,23 @@ def run(no_ffmpeg: bool = False, dry_run: bool = False) -> bool:
     if in_venv():
         py = Path(sys.executable)
         print(f"\n가상환경 안이다 → {py}")
+        if not dry_run and not has_pip(py):
+            py, on_base_python = base_python(), True
+            print(f"  이 가상환경엔 pip 이 없다(설치가 중간에 끊긴 흔적) — 원래 파이썬으로 간다 → {py}")
     else:
         vdir = REPO_ROOT / ".venv"
         py = venv_python(vdir)
-        if py.exists():
+        if py.exists() and (dry_run or has_pip(py)):
             print(f"\n기존 .venv 를 쓴다 → {py}")
+        elif py.exists():
+            print(f"\n기존 .venv 에 pip 이 없다 — 지우고 다시 만든다")
+            shutil.rmtree(vdir, ignore_errors=True)
+            made = make_venv(vdir)
+            if made is None:
+                print("\n★ 가상환경을 못 만들었다 — 지금 쓰는 파이썬에 그대로 깐다.")
+                py, on_base_python = base_python(), True
+            else:
+                py = made
         elif dry_run:
             print("\n가상환경(.venv) 이 없다 — 새로 만들 예정")
             make_venv(vdir, dry_run=True)
