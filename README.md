@@ -21,17 +21,34 @@
 
 ## 설치
 
-**macOS · Windows · Linux 공통 — 두 줄이면 끝납니다.**
+### 에이전트에게 맡기기 (권장 — 명령어를 하나도 안 칩니다)
+
+Claude Code 나 Codex 를 열고 그냥 말하면 됩니다.
+
+```
+이 repo 설치해줘        → 에이전트가 clone 부터 ffmpeg 까지 알아서 끝냅니다
+```
+
+저장소를 이미 받아 뒀다면 그 폴더에서 **"설치해줘"** 한마디면 됩니다.
+에이전트는 `CLAUDE.md` / `AGENTS.md` 를 읽고 아래 스크립트를 대신 실행합니다.
+
+### 직접 하기 — 한 줄
 
 ```bash
 git clone https://github.com/d-onworks/flowmaker_public.git
 cd flowmaker_public
-python3 -m flowmaker setup          # Windows PowerShell 은 python -m flowmaker setup
+bash install.sh                                                   # macOS · Linux
+```
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1   # Windows
 ```
 
-`setup` 이 알아서 합니다 — 가상환경(`.venv`) 만들기 · 파이썬 패키지 · 플레이라이트 크로미엄 ·
+이 한 줄이 **파이썬부터 ffmpeg 까지 전부** 깝니다 — 파이썬(없으면 `brew`·`winget` 으로) ·
+가상환경(`.venv`) · 파이썬 패키지 · 플레이라이트 크로미엄 ·
 **ffmpeg**(macOS `brew` · Windows `winget`/`choco`/`scoop` · Linux `apt`/`dnf`/`pacman`) ·
-`.env` 복사 · 자막 폰트 내려받기 · 마지막에 환경 점검.
+`.env` 복사 · 자막 폰트 · 마지막에 환경 점검.
+
+파이썬이 이미 있다면 `python -m flowmaker setup` 만 해도 같습니다(`install` 은 파이썬 설치가 추가된 것뿐입니다).
 
 끝나면 안내대로 가상환경을 켜고 로그인합니다.
 

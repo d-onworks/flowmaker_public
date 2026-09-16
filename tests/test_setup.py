@@ -104,3 +104,19 @@ def test_cli_survives_cp949_pipe():
     c = subprocess.run([sys.executable, "-c", "print('✅❌⚠—')"],
                        env=env, capture_output=True)
     assert c.returncode != 0 and b"UnicodeEncodeError" in c.stderr
+
+
+def test_install_ps1_has_utf8_bom():
+    """윈도우 기본 PowerShell 5.1 은 BOM 이 없으면 .ps1 을 cp949 로 읽는다.
+
+    한글 주석이 깨져 구문 오류로 죽는다 — 실측으로 한 번 당했다.
+    """
+    b = (REPO_ROOT / "install.ps1").read_bytes()
+    assert b.startswith(b"\xef\xbb\xbf"), "install.ps1 은 UTF-8 BOM 으로 저장해야 한다"
+
+
+def test_install_sh_is_executable_and_posix():
+    import os
+    p = REPO_ROOT / "install.sh"
+    assert os.access(p, os.X_OK), "install.sh 에 실행 권한이 있어야 한다"
+    assert b"\r\n" not in p.read_bytes(), "install.sh 는 LF 줄바꿈이어야 한다"

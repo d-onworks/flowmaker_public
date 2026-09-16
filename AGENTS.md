@@ -9,19 +9,23 @@
 
 ## 무슨 일을 시키든 — 첫 도구 호출은 이것
 
-```
-python3 -m flowmaker doctor        # ❌ 가 하나라도 있으면 ↓
-python3 -m flowmaker setup         # 파이썬 패키지 · 크로미엄 · ffmpeg · .env · 폰트를 실제로 깐다
+```bash
+python -m flowmaker doctor        # ❌ 가 하나라도 있으면 ↓
+bash install.sh                                                   # macOS · Linux
+powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1   # Windows
 ```
 
-방금 clone 한 사용자가 **"영상 만들어줘"라고만 말해도** 여기부터 시작한다 — 사용자에게
-"먼저 설치하세요"라고 되묻지 않는다. `setup` 은 venv 가 없으면 `.venv` 를 만들어 거기에 깔고,
-ffmpeg 은 OS 패키지 관리자(macOS brew · Windows winget/choco/scoop · Linux apt/dnf)로 깐다.
-설치 뒤에는 **`.venv` 안의 파이썬으로** 이후 명령을 실행한다
-(`.venv/bin/python -m flowmaker …` · 윈도우는 `.venv\Scripts\python.exe -m flowmaker …`).
+`install` 스크립트 하나가 **파이썬부터 ffmpeg까지 전부** 깐다 — 파이썬이 없으면 brew·winget 으로
+깔고, 가상환경을 만들고, 파이썬 패키지·플레이라이트 크로미엄·ffmpeg·`.env`·자막 폰트까지 넣고
+마지막에 `doctor` 로 점검한다. 방금 clone 한 사용자가 **"설치해줘"나 "영상 만들어줘"라고만 해도**
+여기서 시작한다 — **"먼저 파이썬을 까세요" 같은 준비물을 사용자에게 요구하지 않는다.**
 
-윈도우에서 ffmpeg 을 방금 깔았다면 PATH 반영이 안 될 수 있다 — `doctor` 가 여전히 ❌ 면
-**새 터미널에서** 다시 확인한다.
+- 설치 뒤 남는 사용자 몫은 둘뿐이다: `.env` 의 `ELEVENLABS_API_KEY`, `python -m flowmaker login`.
+- `.venv` 가 생겼으면 이후 명령은 그 안의 파이썬으로 실행한다
+  (`.venv/bin/python -m flowmaker …` · 윈도우 `.venv\Scripts\python.exe -m flowmaker …`).
+  `install` 이 "가상환경을 못 만들었다"고 했으면 그냥 `python -m flowmaker …` 로 쓴다.
+- 윈도우에서 ffmpeg·파이썬을 방금 깔았다면 PATH 반영이 안 될 수 있다 — `doctor` 가 여전히 ❌ 면
+  **새 터미널에서** 다시 확인한다.
 
 ## 처음 한 번 — 읽을 것
 
