@@ -10,13 +10,16 @@
     tts <프로젝트>               원샷 더빙
     timing <프로젝트> --target 100   배속 + 자막 타임코드   (또는 --tempo 1.2)
     sync-need <프로젝트>         컷 길이(need)를 나레이션에 맞춤
+    board <프로젝트>             스토리보드 — 컷마다 Flow 이미지 모드로 대표 이미지 1장 [--only 3,7] [--max-credit N] [--redo]
+    storyboard <프로젝트>        board 이미지를 컷 정보와 묶어 storyboard.html 로 [--redo 5,17 = 다시 뽑는 중 표시]
     submit <프로젝트> <len>      Flow 제출 (len = 4|6|8|10) [--only 3,7]   종료코드 3 = 일부만 전송
     collect <프로젝트> <len>     생성된 클립 회수   종료코드 2 = 아직 생성 중
     review <프로젝트>            프레임 검수 시트
     subs <프로젝트>              자막 PNG
     sfx <프로젝트>               효과음 생성 (sfx.json 있을 때)
     music <프로젝트> "prompt"    배경음악 생성 (선택 · ElevenLabs 유료 플랜)
-    assemble <프로젝트>          최종 조립 → final.mp4
+    assemble <프로젝트>          최종 조립 → final.mp4  (Flow 별 모양 AI 마크는 지운다 · 남기려면 --keep-mark)
+    unmark <프로젝트>            AI 마크 지우기 미리보기 [--clip 5] · Flow 가 마크를 바꾸면 --calibrate
     status <프로젝트>            진행 상황
 
 <프로젝트> 는 이름(projects/<이름>) 또는 경로(examples/moai) 다.
@@ -81,6 +84,10 @@ def cmd_check(a):
     for c in cuts:
         c["done"] = p.clip(c["n"]).exists()
     print("통과 ·", summary(cuts))
+    lack = [f"C{c['n']:02d}" for c in cuts if not c.get("must") and not c.get("abstract")]
+    n_must = sum(len(c.get("must") or []) for c in cuts)
+    print(f"구조·고증 명세(must) {n_must}줄" + (f" · ★명세 없는 컷 {', '.join(lack)} — 사실 컷이면 must, 상징 컷이면 abstract: true"
+                                              if lack else " · 모든 컷 분류됨"))
 
 
 def cmd_status(a):
@@ -132,6 +139,13 @@ def main(argv=None) -> None:
     s = sub.add_parser("new"); s.add_argument("project"); s.add_argument("--from", dest="from_example")
     for name in ("check", "status", "tts", "sync-need", "review", "subs", "sfx", "assemble"):
         s = sub.add_parser(name); s.add_argument("project")
+        if name == "assemble":
+            s.add_argument("--keep-mark", action="store_true", help="Flow 의 AI 마크를 지우지 않는다")
+    s = sub.add_parser("storyboard"); s.add_argument("project")
+    s.add_argument("--redo", help="'다시 뽑는 중'으로 표시할 컷 번호, 쉼표 구분")
+    s = sub.add_parser("unmark"); s.add_argument("project")
+    s.add_argument("--calibrate", action="store_true", help="이 편 클립에서 마크 모양을 다시 잰다")
+    s.add_argument("--clip", type=int, help="미리보기할 컷 번호")
     s = sub.add_parser("timing"); s.add_argument("project")
     g = s.add_mutually_exclusive_group(required=True)
     g.add_argument("--target", type=_positive, help="목표 나레이션 길이(초). 보통 100")
@@ -141,6 +155,11 @@ def main(argv=None) -> None:
         s.add_argument("--headless", action="store_true")
         if name == "submit":
             s.add_argument("--only", help="컷 번호, 쉼표 구분 (예: 3,7)")
+    s = sub.add_parser("board"); s.add_argument("project")
+    s.add_argument("--only", help="컷 번호, 쉼표 구분 (예: 3,7)")
+    s.add_argument("--max-credit", type=int, default=None, help="이미지 1장당 허용 크레딧 상한 (기본: 0일 때만 진행)")
+    s.add_argument("--redo", action="store_true", help="이미 있는 컷도 다시 뽑는다")
+    s.add_argument("--headless", action="store_true")
     s = sub.add_parser("music"); s.add_argument("project"); s.add_argument("prompt"); s.add_argument("--seconds", type=int, default=100)
 
     a = ap.parse_args(argv)
@@ -169,6 +188,10 @@ def main(argv=None) -> None:
         from . import flow_driver
         only = {int(x) for x in a.only.split(",")} if a.only else None
         flow_driver.submit(p, a.len, only, headless=a.headless)
+    elif a.cmd == "board":
+        from . import flow_driver
+        only = {int(x) for x in a.only.split(",")} if a.only else None
+        flow_driver.board(p, only, max_credit=a.max_credit, redo=a.redo, headless=a.headless)
     elif a.cmd == "collect":
         from . import flow_driver
         flow_driver.collect(p, a.len, headless=a.headless)
@@ -183,4 +206,12 @@ def main(argv=None) -> None:
     elif a.cmd == "music":
         from . import sfx; sfx.music(p, a.prompt, a.seconds)
     elif a.cmd == "assemble":
-        from . import assemble; assemble.run(p)
+        from . import assemble; assemble.run(p, keep_mark=a.keep_mark)
+    elif a.cmd == "storyboard":
+        from . import storyboard
+        storyboard.run(p, {int(x) for x in a.redo.split(",")} if a.redo else set())
+    elif a.cmd == "unmark":
+        from . import unmark
+        if a.calibrate:
+            unmark.calibrate(p)
+        unmark.preview(p, a.clip)

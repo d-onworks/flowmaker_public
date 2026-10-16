@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+import re
 import os
 import subprocess
 
@@ -103,9 +104,13 @@ def split_point(t: str) -> int | None:
     ok = lambda i: 0.30 * n <= i <= 0.70 * n
     def good(i):
         left, right = t[:i].rstrip(), t[i:].lstrip()
-        if not left or not right or right[0].isdigit():
+        if not left or not right:
             return False
         lw = left.split()[-1]
+        if re.search(r"\d[\d,.]*(여|약|만|천|백)?$", lw):     # "150여 | 년" 처럼 숫자와 단위를 가르지 않는다
+            return False
+        if right[0].isdigit() and not left.endswith(","):   # 숫자 앞은 쉼표 뒤에서만 자른다
+            return False
         return not (len(lw) == 1 and lw in "이그저한두세네온각매그의")
     commas = [i + 1 for i, c in enumerate(t)
               if c == "," and not (t[i-1:i].isdigit() and t[i+1:i+2].isdigit())]
@@ -122,7 +127,8 @@ def _split_cards(rows: list[dict]) -> list[dict]:
     f, d = _measurer()
     cards = []
     for r in rows:
-        parts = [r["text"]]
+        # subtitles.txt 에 " / " 를 넣으면 그 자리에서 카드를 나눈다(직접 지정이 자동 분할보다 우선)
+        parts = [p.strip() for p in r["text"].split(" / ")] if " / " in r["text"] else [r["text"]]
         for _ in range(2):                          # 최대 2회 분할 → 최대 4장
             out = []
             for t in parts:

@@ -29,3 +29,6 @@ venv/
 
 # OS
 .DS_Store
+
+# 저장소에 들어가야 하는 그림(AI 마크 마스크)
+!flowmaker/assets/*.png
