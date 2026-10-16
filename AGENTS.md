@@ -52,7 +52,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1   # Windows
 
 ```
 0  doctor → (❌ 있으면) setup        환경. 어떤 작업이든 여기서 시작한다
-1  new <p> [--from moai]         프로젝트 폴더
+1  new <p> [--from moai] [--style clay]   프로젝트 폴더 · diag 그림 스타일(clay·archviz·flat, 크레딧 같음 — guides/prompting.md 1-1절)
+                                  쓰던 편은 style <p> <스타일> (클립이 생기기 전에만)
 2  facts.md · script.txt · subtitles.txt      ← 에이전트가 쓴다 (guides/format.md, research.md)
                                   ★script.txt(숫자 한글 풀이·공백 포함) 750자 안팎이 v3 원본 ≈125초(실측 ≈6자/초)
 3  tts <p>                       원샷 더빙 → narration_raw.mp3 + alignment.json

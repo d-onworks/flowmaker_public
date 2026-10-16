@@ -5,7 +5,8 @@
     setup                       clone 직후 한 번 — 파이썬 패키지 · 크로미엄 · ffmpeg · .env · 폰트를 깐다
     doctor                      환경 점검 (깔지는 않는다 — 부족하면 `setup`)
     login                       Flow 로그인 (한 번) — 같은 창에서 생성 설정(동영상·9:16·출력 1개)을 맞춰 둔다
-    new <이름> [--from moai]     프로젝트 폴더 만들기 (예시 복사 가능)
+    new <이름> [--from moai] [--style clay]   프로젝트 폴더 만들기 (예시 복사 가능 · diag 그림 스타일 선택)
+    style <프로젝트> [스타일]     diag 그림 스타일 보기/바꾸기 — clay · archviz · flat (크레딧은 같다)
     check <프로젝트>             cuts.json 형식 + 그림체 정본 검사 (크레딧 0)
     tts <프로젝트>               원샷 더빙
     timing <프로젝트> --target 100   배속 + 자막 타임코드   (또는 --tempo 1.2)
@@ -27,6 +28,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import sys
 
@@ -68,6 +70,52 @@ def cmd_new(a):
         (dst / "cuts.json").write_text("[]", encoding="utf-8")
         (dst / "facts.md").write_text("# 사실 검증\n\n", encoding="utf-8")
         print(f"빈 프로젝트 → {dst}\n  script.txt · subtitles.txt · cuts.json · facts.md 를 채워라 (guides/ 참고)")
+    if a.style:
+        p = Project(a.project)
+        if a.from_example and a.style != p.style:
+            raise SystemExit(f"예시는 {p.style} 스타일로 쓰여 있다 — 복사한 뒤 `style {a.project} {a.style}` 로 바꿔라")
+        p.set_style(a.style)
+    print(f"diag 그림 스타일: {Project(a.project).style} — {style.DIAG_STYLES[Project(a.project).style]['label']}"
+          f"  (diag 꼬리는 style.diag_tail('{Project(a.project).style}'), 강조는 style.accent(대상, '{Project(a.project).style}'))")
+
+
+def cmd_style(a):
+    """diag 그림 스타일 보기/바꾸기. 바꾸면 diag 컷의 첫머리·강조 문장·꼬리를 새 스타일로 옮긴다."""
+    p = Project(a.project).must_exist()
+    cur = p.style
+    if not a.name:
+        for k, v in style.DIAG_STYLES.items():
+            print(("▶ " if k == cur else "  ") + f"{k:9s} {v['label']}")
+        print("바꾸려면: style <프로젝트> <스타일>  — 크레딧은 스타일과 무관하다(모델·길이·해상도로 정해진다)")
+        return
+    if a.name not in style.DIAG_STYLES:
+        raise SystemExit(f"스타일이 없다: {a.name} (있는 것: {', '.join(style.DIAG_STYLES)})")
+    if a.name == cur:
+        print(f"이미 {cur} 이다"); return
+    cuts = p.read_cuts_raw()
+    made = [c["n"] for c in cuts if p.clip(c["n"]).exists()]
+    if made and not a.force:
+        raise SystemExit(f"이미 클립이 있는 컷이 있다({', '.join(f'C{n:02d}' for n in made)}) — 한 편 안에 스타일이 섞인다. "
+                         f"정말 바꾸려면 --force (클립은 그대로, 프롬프트만 바뀐다)")
+    out = []
+    for c in cuts:
+        if c.get("kind") == "diag":
+            try:
+                c = dict(c, prompt=style.restyle_prompt(c["prompt"], cur, a.name))
+            except ValueError as e:
+                raise SystemExit(f"C{c['n']:02d}: {e}")
+        out.append(c)
+    p.build.mkdir(parents=True, exist_ok=True)
+    bak = p.build / f"cuts.before_{a.name}.json"
+    bak.write_text(p.cuts_path.read_text(encoding="utf-8"), encoding="utf-8")
+    p.cuts_path.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    p.set_style(a.name)
+    print(f"{cur} → {a.name} ({style.DIAG_STYLES[a.name]['label']}) · diag {sum(c.get('kind') == 'diag' for c in out)}컷 바꿈 · 이전 cuts.json → {bak}")
+    bad = style.check(out, diag_style=a.name)
+    for x in bad:
+        print("★위반:", x)
+    print("남은 위반 없음 — 보드부터 다시 뽑아 확인하라 (board <프로젝트> --redo)" if not bad else
+          "위 컷의 본문에서 다른 스타일의 말을 직접 고쳐라")
 
 
 def cmd_check(a):
@@ -76,14 +124,15 @@ def cmd_check(a):
     problems = validate_cuts(cuts, p.n_sentences())
     for x in problems:
         print("★형식:", x)
-    bad = style.check(cuts) if not problems else []
+    st = p.style
+    bad = (style.check(cuts) if st == "clay" else style.check(cuts, diag_style=st)) if not problems else []
     for x in bad:
         print("★위반:", x)
     if problems or bad:
         raise SystemExit(f"검사 실패 — 형식 {len(problems)}건 · 정본 {len(bad)}건")
     for c in cuts:
         c["done"] = p.clip(c["n"]).exists()
-    print("통과 ·", summary(cuts))
+    print("통과 ·", summary(cuts), f"· diag 스타일 {st}({style.DIAG_STYLES[st]['label']})")
     lack = [f"C{c['n']:02d}" for c in cuts if not c.get("must") and not c.get("abstract")]
     n_must = sum(len(c.get("must") or []) for c in cuts)
     print(f"구조·고증 명세(must) {n_must}줄" + (f" · ★명세 없는 컷 {', '.join(lack)} — 사실 컷이면 must, 상징 컷이면 abstract: true"
@@ -137,6 +186,9 @@ def main(argv=None) -> None:
     sub.add_parser("doctor")
     sub.add_parser("login")
     s = sub.add_parser("new"); s.add_argument("project"); s.add_argument("--from", dest="from_example")
+    s.add_argument("--style", choices=tuple(style.DIAG_STYLES), help="diag 그림 스타일 (기본 clay)")
+    s = sub.add_parser("style"); s.add_argument("project"); s.add_argument("name", nargs="?")
+    s.add_argument("--force", action="store_true", help="클립이 이미 있어도 바꾼다")
     for name in ("check", "status", "tts", "sync-need", "review", "subs", "sfx", "assemble"):
         s = sub.add_parser(name); s.add_argument("project")
         if name == "assemble":
@@ -172,6 +224,8 @@ def main(argv=None) -> None:
         from . import flow_driver; flow_driver.login(); return
     if a.cmd == "new":
         cmd_new(a); return
+    if a.cmd == "style":
+        cmd_style(a); return
     if a.cmd == "check":
         cmd_check(a); return
     if a.cmd == "status":

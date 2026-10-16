@@ -19,6 +19,28 @@ from flowmaker.style import diag_tail, hist_tail, real_tail, mannequin
 왜 회색 점토인가 — "3D 단면도를 그려줘"라고 하면 모델이 매번 다른 걸 상상한다. "무광 회색 점토, 중간 회색
 배경, 하늘 없음"은 해석의 여지가 없다. **정확도는 지시의 강도가 아니라 서술의 구체성에서 나온다.**
 
+### 1-1. diag 그림 스타일 고르기 (2026-10 추가)
+
+diag 는 편마다 그림 스타일을 고를 수 있다. 기본은 점토(clay)이고, 설정은 `projects/<편>/project.json` 의 `"style"`.
+
+| style | 무엇 | 잘 맞는 소재 | 조심할 것 |
+|---|---|---|---|
+| `clay` | 회색 점토 다이어그램 (지금까지의 모든 편) | 원리·흐름 — 회색 위에 주황(열)·파랑(물)이 또렷하다 | 재료 차이(돌·흙·콘크리트)가 안 보인다 |
+| `archviz` | 무채색 실사 건축 CG + 빛나는 청록 안내선·화살표 | 실제 건물·구조가 주인공인 편, 고급스러운 다큐 느낌 | 숫자·라벨은 그리게 하지 않는다(엉뚱한 글자 — 남의 쇼츠에서 색상 코드 "#00E5FF" 가 글자로 찍힌 사례). 치수는 조립에서 덧입힌다 |
+| `flat` | 아이소메트릭 플랫 일러스트 | 가볍고 친근한 편, 개념 비교 | 깊이·재질이 약하다 |
+
+2026-10 비교 보드(온돌 C08·C12·C14)에서 실사 재질(material)은 "너무 사실적"이라 빼고, X-ray 는 고르지 않았다.
+보드: projects/ondol/build/styletest/ (지난 시험) · projects/styletest_<style>/ (지금 옵션).
+
+- **크레딧은 스타일과 무관하다.** Flow 크레딧은 모델·길이·해상도로 정해지고 프롬프트 내용과는 상관없다. 보드도 그대로 0크레딧.
+- 스타일은 프롬프트의 세 군데만 바꾼다: 첫머리 `diag_opener(style)` · 강조 문장 `accent(대상, style)` · 꼬리 `diag_tail(style)`.
+  본문은 내용(구조·경로·개수)만 쓴다. 예: `diag_opener("archviz") + " of a room floor in section. … " + accent("the warm water", "archviz") + " The camera holds still." + diag_tail("archviz")`
+- 새 편: `new <편> --style archviz`. 쓰던 편: `style <편> archviz` — diag 컷의 첫머리·강조·꼬리를 옮기고 이전 cuts.json 을 `build/cuts.before_archviz.json` 에 남긴다.
+  클립이 이미 있으면 한 편 안에 스타일이 섞이므로 막는다(`--force` 로만).
+- `check` 는 편의 스타일 꼬리로 검사하고, 다른 스타일의 말('matte grey', 'clay', '3D CG' 등)이 본문에 남으면 잡는다(규칙 11).
+- **한 편 안에서는 한 스타일만.** 새 스타일은 보드부터 — 스타일마다 잘 틀리는 곳이 다르다.
+  `tools/pipe_fill.py` 는 회색 바탕 기준으로 맞춘 값이라 다른 스타일에서는 `--th` 등을 다시 잡는다.
+
 ## 2. 컷 설계 — cuts.json
 
 - Flow 는 **4·6·8·10초**만 생성한다. 크레딧 7·10·12·15.

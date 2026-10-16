@@ -79,13 +79,15 @@ def _log(msg: str) -> None:
 
 
 # ── 순수 로직 (테스트 대상) ──────────────────────────────────────────────────
-def gate_violations(targets: list[dict], cuts: list[dict]) -> list[str]:
+def gate_violations(targets: list[dict], cuts: list[dict], diag_style: str = "clay") -> list[str]:
     """제출 직전 관문. 컷 규칙(숫자·옷·꼬리…)은 이번에 보낼 컷만, 구성 규칙(실사 비중·연속)은 편 전체로 본다.
 
     2026-10 사고: 6초 그룹(6컷 중 실사 2컷)만 놓고 실사 비중을 재서 33.6% 로 막혔다 — 편 전체는 19%.
+    diag_style 은 편의 그림 스타일(project.json). clay 면 예전과 똑같이 부른다(바꿔 끼운 검사 함수와의 호환).
     """
-    per_cut = [v for v in style.check(targets) if not v.startswith(("실사", "연속"))]
-    return per_cut + style.composition_only(style.check(cuts))
+    chk = (lambda cs: style.check(cs)) if diag_style == "clay" else (lambda cs: style.check(cs, diag_style=diag_style))
+    per_cut = [v for v in chk(targets) if not v.startswith(("실사", "연속"))]
+    return per_cut + style.composition_only(chk(cuts))
 
 
 def map_clips(order: list[int], urls: list[str]) -> dict[int, str]:
@@ -369,7 +371,7 @@ def submit(project: Project, length: int, only: set[int] | None = None, headless
         sys.exit(0)
 
     # ★마지막 관문 — 이번에 크레딧을 쓸 컷만 검사하고, 구성 규칙은 전체로 한 번 더 본다
-    bad = gate_violations(targets, cuts)
+    bad = gate_violations(targets, cuts, project.style)
     if bad:
         for b in bad:
             print("★위반:", b)
@@ -649,7 +651,7 @@ def board(project: Project, only: set[int] | None = None, max_credit: int | None
     if not targets:
         _log("[board] 뽑을 컷 없음 (이미 다 있다 — 다시 뽑으려면 --redo)")
         return 0
-    bad = gate_violations(targets, cuts)
+    bad = gate_violations(targets, cuts, project.style)
     if bad:
         for b in bad:
             print("★위반:", b)

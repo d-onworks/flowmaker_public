@@ -5,6 +5,8 @@ projects/<이름>/
     script.txt          나레이션 대본 — 한 줄 = 한 문장. TTS 발음용이라 숫자를 한글로 쓴다("천팔백오십사 년")
     subtitles.txt       자막 문구 — script.txt와 줄 수가 같고, 숫자는 아라비아 숫자("1854년")
     cuts.json           컷 계획 — 아래 스키마
+    project.json        편 설정 (선택) — {"style": "clay"|"archviz"|"flat"} diag 그림 스타일, 없으면 clay.
+                        `new <이름> --style archviz` 로 만들거나 `style <이름> archviz` 로 바꾼다 (flowmaker/style.py DIAG_STYLES)
     facts.md            사실 검증 기록 (출처·쓰면 안 되는 것)
     sfx.json            효과음 계획 (선택)
     bgm.mp3             배경음악 (선택 — 있으면 조립에 쓴다)
@@ -78,6 +80,32 @@ class Project:
     def subtitles(self) -> Path: return self.dir / "subtitles.txt"
     @property
     def cuts_path(self) -> Path: return self.dir / "cuts.json"
+    @property
+    def config_path(self) -> Path: return self.dir / "project.json"
+
+    def config(self) -> dict:
+        if not self.config_path.exists():
+            return {}
+        try:
+            d = json.loads(self.config_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            raise SystemExit(f"project.json 이 올바른 JSON 이 아니다: {e}")
+        if not isinstance(d, dict):
+            raise SystemExit("project.json 은 {\"style\": \"clay\"} 같은 객체여야 한다")
+        return d
+
+    @property
+    def style(self) -> str:
+        """이 편의 diag 그림 스타일 (project.json "style", 기본 clay)."""
+        from .style import DIAG_STYLES, DEFAULT_STYLE
+        s = self.config().get("style", DEFAULT_STYLE)
+        if s not in DIAG_STYLES:
+            raise SystemExit(f"project.json 의 style '{s}' 가 없다 — 있는 것: {', '.join(DIAG_STYLES)}")
+        return s
+
+    def set_style(self, name: str) -> None:
+        d = self.config(); d["style"] = name
+        self.config_path.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     @property
     def sfx_path(self) -> Path: return self.dir / "sfx.json"
     @property

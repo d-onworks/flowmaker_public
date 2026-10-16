@@ -7,7 +7,7 @@
     규칙은 여기 한 곳에만 두고, 사고가 날 때마다 check()에 한 줄씩 보탠다.
 
 그림체 3종
-    diag  회색 점토 다이어그램 — 원리 설명. 화면의 70~85%를 차지한다.
+    diag  원리 설명 도해 — 화면의 70~85%를 차지한다. 그림 스타일은 편마다 고른다(아래 DIAG_STYLES, 기본 clay).
     hist  시대 재현 실사     — 이야기 비트에만 (감정 전달).
     real  현대 현장 실사     — 훅과 엔딩 북엔드에만.
 
@@ -16,6 +16,15 @@
     조항 없는 편 = 9/9컷 사람 없음, 조항 넣은 편 = 12/12컷 우두커니 선 마네킹.
     → 기본 꼬리에는 사람 언급이 없다. 사람이 필요한 컷만 본문에서 mannequin(동작)으로 부른다.
     → 사람은 ①나레이션의 동작을 실연하거나 ②크기 대비가 정보일 때만. 우두커니 서 있는 사람 금지.
+
+diag 스타일 (2026-10 추가 — 편 단위 옵션, projects/<편>/project.json 의 "style")
+    clay      회색 점토 다이어그램 (기본 · 지금까지의 모든 편)
+    archviz   무채색 실사 건축 CG + 청록 안내선·화살표 (숫자·라벨은 그리지 않는다 — 필요하면 조립에서 덧입힌다)
+    flat      아이소메트릭 플랫 일러스트 — 색면과 얇은 윤곽선
+    (2026-10 비교 보드 뒤 사용자 결정: 실사 재질(material)은 너무 사실적이라 빼고, X-ray 는 고르지 않았다 — 꼬리 문구는 git 기록에 있다)
+    스타일은 프롬프트의 세 군데만 바꾼다: 첫머리(opener) · 강조 문장(accent) · 꼬리(tail).
+    Flow 크레딧은 모델·길이·해상도로 정해지고 프롬프트와는 무관하다 — 스타일을 바꿔도 크레딧은 같다.
+    본문은 스타일과 무관하게 내용(구조·경로·개수)만 쓰고, 강조는 accent(대상, 스타일)로 붙인다.
 """
 from __future__ import annotations
 
@@ -23,12 +32,80 @@ import re
 
 # ── 꼬리 문장 ─────────────────────────────────────────────────────────────
 
-def diag_tail() -> str:
-    """회색 점토 다이어그램. 사람 언급 없음(조건문 = 소환 주문)."""
-    return (" Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no "
-            "environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no "
-            "harsh shadows. Flat precise technical documentary infographic look, not photorealistic, "
-            "not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo.")
+_NO_TEXT = "No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+
+# 꼬리·첫머리·강조 문장 — 사람 언급 없음(조건문 = 소환 주문). 숫자를 쓰지 않는다.
+DIAG_STYLES: dict[str, dict] = {
+    "clay": {
+        "label": "회색 점토 다이어그램",
+        "opener": "Clean 3D CG cutaway diagram",
+        "accent": "Everything except {x} is matte grey.",
+        "tail": (" Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no "
+                 "environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no "
+                 "harsh shadows. Flat precise technical documentary infographic look, not photorealistic, "
+                 "not cinematic. " + _NO_TEXT),
+    },
+    "archviz": {
+        "label": "무채색 실사 건축 CG + 청록 안내선",
+        "opener": "Photoreal architectural visualization cutaway",
+        "accent": "Strong colour is used only for {x}; everything else stays in a near-monochrome palette of white, pale concrete and soft grey.",
+        "tail": (" Photoreal architectural visualization in a near-monochrome palette of white, pale concrete and soft "
+                 "grey, clean modern rendering on a plain light grey studio ground, no sky, no environment. Soft "
+                 "overcast daylight, gentle shadows, everything in crisp focus. Thin glowing cyan guide lines and simple "
+                 "glowing cyan arrows trace the key paths and directions, with no labels on them. Precise technical "
+                 "documentary look, not cinematic. " + _NO_TEXT),
+    },
+    "flat": {
+        "label": "아이소메트릭 플랫 일러스트",
+        "opener": "Flat isometric illustration cutaway",
+        "accent": "Strong accent colour is used only for {x}; everything else uses the calm muted fills.",
+        "tail": (" Clean flat vector illustration in an isometric infographic style, with crisp simple shapes, "
+                 "flat colour fills in a calm muted palette of warm grey, sand and soft slate blue, thin even "
+                 "outlines and simple flat shading, on a plain light grey background, no sky, no environment. "
+                 "Precise technical infographic look, not photorealistic, not cinematic. " + _NO_TEXT),
+    },
+}
+DEFAULT_STYLE = "clay"
+# 스타일마다 본문에 남으면 안 되는 다른 스타일의 말 (restyle 이 못 바꾼 흔적)
+_STYLE_CLASH = {
+    "archviz": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG)\b", re.I),
+    "flat": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG|photoreal)\b", re.I),
+}
+
+
+def _style(name: str) -> dict:
+    if name not in DIAG_STYLES:
+        raise ValueError(f"diag 스타일이 없다: {name} (있는 것: {', '.join(DIAG_STYLES)})")
+    return DIAG_STYLES[name]
+
+
+def diag_tail(style: str = DEFAULT_STYLE) -> str:
+    """diag 꼬리. 기본은 회색 점토."""
+    return _style(style)["tail"]
+
+
+def diag_opener(style: str = DEFAULT_STYLE) -> str:
+    """diag 본문 첫머리 (예: 'Clean 3D CG cutaway diagram')."""
+    return _style(style)["opener"]
+
+
+def accent(things: str, style: str = DEFAULT_STYLE) -> str:
+    """강조 문장 — 색을 쓸 대상만 고른다. 예: accent("the flame and the warm water", "archviz")."""
+    return _style(style)["accent"].format(x=things.strip())
+
+
+def restyle_prompt(prompt: str, src: str, dst: str) -> str:
+    """diag 프롬프트의 첫머리·강조 문장·꼬리를 src 스타일에서 dst 스타일로 바꾼다. 꼬리가 다르면 ValueError."""
+    a, b = _style(src), _style(dst)
+    body = prompt.rstrip()
+    if not body.endswith(a["tail"].strip()):
+        raise ValueError(f"꼬리가 {src} 정본과 다르다 — 먼저 check 를 통과시켜라")
+    body = body[: len(body) - len(a["tail"].strip())].rstrip()
+    if body.startswith(a["opener"]):
+        body = b["opener"] + body[len(a["opener"]):]
+    pat = re.escape(a["accent"]).replace(re.escape("{x}"), "(.+?)")
+    body = re.sub(pat, lambda m: b["accent"].format(x=m.group(1)), body)
+    return body + b["tail"]
 
 
 DEFAULT_CLOTHING = ("a plain long-sleeved one-piece work garment covering the arms and legs fully, "
@@ -101,8 +178,8 @@ def _dur(c: dict) -> float:
     return float(c.get("need") or c["len"])
 
 
-def check(cuts: list[dict]) -> list[str]:
-    """컷 목록을 검사해 위반 문장 목록을 돌려준다. 비어 있으면 통과.
+def check(cuts: list[dict], diag_style: str = DEFAULT_STYLE) -> list[str]:
+    """컷 목록을 검사해 위반 문장 목록을 돌려준다. 비어 있으면 통과. diag_style = 이 편의 diag 스타일.
 
     각 컷: {"n": int, "len": 4|6|8|10, "kind": "diag"|"hist"|"real", "prompt": str, "need": float?}
     규칙마다 실제로 겪은 사고가 있다 — 지우지 말고 보태기만 할 것.
@@ -126,8 +203,17 @@ def check(cuts: list[dict]) -> list[str]:
         if re.search(r"Any human figure", p, re.I):
             bad.append(f"{tag}: 'Any human figure' 조건문이 있다 — 이게 소환 주문이다. 꼬리에서 빼라")
         # 05 정본 꼬리 — 토씨 하나 다르면 걸린다 (diag 전체 · hist/real 은 고정 머리·꼬리)
-        if k == "diag" and not p.rstrip().endswith(diag_tail().strip()):
-            bad.append(f"{tag}: diag 꼬리가 정본과 다르다 — diag_tail() 을 그대로 붙여라")
+        if k == "diag" and not p.rstrip().endswith(diag_tail(diag_style).strip()):
+            other = [s for s in DIAG_STYLES if s != diag_style and p.rstrip().endswith(diag_tail(s).strip())]
+            bad.append(f"{tag}: diag 꼬리가 정본과 다르다 — diag_tail('{diag_style}') 을 그대로 붙여라"
+                       + (f" (지금 꼬리는 '{other[0]}' 스타일 — `style <편> {diag_style}` 로 바꿔라)" if other else ""))
+        # 11 스타일 섞임 — 다른 스타일의 말이 본문에 남으면 그 스타일로 그린다
+        if k == "diag" and diag_style in _STYLE_CLASH:
+            body = p.rstrip()[: -len(diag_tail(diag_style).strip())] if p.rstrip().endswith(diag_tail(diag_style).strip()) else p
+            m = _STYLE_CLASH[diag_style].search(body)
+            if m:
+                bad.append(f"{tag}: '{m.group(1)}' 는 다른 스타일의 말이다({diag_style} 편) — "
+                           f"첫머리는 diag_opener(), 강조는 accent(대상, '{diag_style}') 로 써라")
         if k == "hist" and not (HIST_HEAD in p and p.rstrip().endswith(HIST_END)):
             bad.append(f"{tag}: hist 꼬리가 정본과 다르다 — hist_tail() 을 그대로 붙여라")
         if k == "real" and not (REAL_HEAD in p and p.rstrip().endswith(REAL_END)):
