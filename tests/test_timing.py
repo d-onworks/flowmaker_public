@@ -25,3 +25,18 @@ def test_right_part_never_starts_with_digit():
 
 def test_single_word_returns_none():
     assert split_point("짧다") is None
+
+
+def test_subtitle_cards_are_one_line():
+    """2026-11 사용자 원칙: 자막은 한 줄 — 긴 문장은 자동으로 나누고 ' / ' 가 있으면 그 자리가 우선."""
+    from flowmaker import timing, subtitles
+    try:
+        subtitles.font_path()
+    except SystemExit:
+        return  # 폰트 없는 환경
+    f, d = timing._measurer()
+    cards = timing._split_cards([
+        {"sentence": 1, "start": 0, "end": 4, "text": "경복궁은 북악산을 등지고 남쪽을 바라보도록 지어졌다"},
+        {"sentence": 2, "start": 4, "end": 6, "text": "뉴욕은 10조를 써도 / 못 지었다"}])
+    assert all(timing.n_lines(c["text"], f, d) == 1 for c in cards)
+    assert [c["text"] for c in cards if c["sentence"] == 2] == ["뉴욕은 10조를 써도", "못 지었다"]

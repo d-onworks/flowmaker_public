@@ -37,9 +37,13 @@ diag 는 편마다 그림 스타일을 고를 수 있다. 기본은 점토(clay)
 - 스타일은 프롬프트의 세 군데만 바꾼다: 첫머리 `diag_opener(style)` · 강조 문장 `accent(대상, style)` · 꼬리 `diag_tail(style)`.
   본문은 내용(구조·경로·개수)만 쓴다. 예: `diag_opener("archviz") + " of a room floor in section. … " + accent("the warm water", "archviz") + " The camera holds still." + diag_tail("archviz")`
 - 새 편: `new <편> --style archviz`. 쓰던 편: `style <편> archviz` — diag 컷의 첫머리·강조·꼬리를 옮기고 이전 cuts.json 을 `build/cuts.before_archviz.json` 에 남긴다.
-  클립이 이미 있으면 한 편 안에 스타일이 섞이므로 막는다(`--force` 로만).
+  클립이 이미 있으면 막는다(`--force` 로만 — 클립은 그대로 두고 프롬프트만 바뀐다).
 - `check` 는 편의 스타일 꼬리로 검사하고, 다른 스타일의 말('matte grey', 'clay', '3D CG' 등)이 본문에 남으면 잡는다(규칙 11).
-- **한 편 안에서는 한 스타일만.** 새 스타일은 보드부터 — 스타일마다 잘 틀리는 곳이 다르다.
+- **필요하면 한 편 안에서 그림체를 섞는다**(2026-11 사용자 원칙 — 예: 원리 설명은 `archviz_bright`, 실제 장소가 주인공인 컷은 `hero_mono`).
+  편 스타일은 그대로 두고 그 컷만 `style <편> hero_mono --only 4,7` — 첫머리·강조·꼬리를 옮기고 컷에 `"style": "hero_mono"` 를 붙인다
+  (이전 cuts.json 은 `build/cuts.before_style_4_7.json`). `check` 는 컷별 스타일의 꼬리로 검사하고 통과 줄에 `컷별 스타일 C04=hero_mono` 를 적는다.
+  편 전체를 바꾸는 `style <편> <스타일>` 은 컷별 스타일을 정한 컷을 건드리지 않는다.
+  섞을 때는 장면이 바뀌는 자리(장소 → 원리)에서 바꾸고, 같은 장면 안에서 그림체가 바뀌지 않게 한다. 새 스타일은 보드부터 — 스타일마다 잘 틀리는 곳이 다르다.
   `tools/pipe_fill.py` 는 회색 바탕 기준으로 맞춘 값이라 다른 스타일에서는 `--th` 등을 다시 잡는다.
 
 ## 2. 컷 설계 — cuts.json

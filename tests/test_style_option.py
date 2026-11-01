@@ -75,3 +75,15 @@ def test_project_style_default_and_setting(tmp_path):
 def test_unknown_style_is_refused():
     with pytest.raises(ValueError):
         style.diag_tail("xray")
+
+
+def test_cut_style_override_mixes_styles_in_one_episode():
+    """2026-11 사용자 원칙: 필요하면 한 편 안에서 그림체를 섞는다 — 컷의 "style" 이 편 스타일보다 우선."""
+    from flowmaker import style
+    a = {"n": 1, "len": 4, "kind": "diag", "prompt": "x." + style.diag_tail("hero_mono"), "style": "hero_mono"}
+    b = {"n": 2, "len": 4, "kind": "diag", "prompt": "y." + style.diag_tail("archviz_bright")}
+    assert style.check([a, b], diag_style="archviz_bright") == []
+    no = dict(a); no.pop("style")
+    assert any("C01" in v for v in style.check([no, b], diag_style="archviz_bright"))
+    bad = dict(a, style="nope")
+    assert any("없다" in v for v in style.check([bad], diag_style="archviz_bright"))

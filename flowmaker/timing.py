@@ -86,6 +86,11 @@ def _measurer():
     return f, d
 
 
+# 자막 카드 한 장의 최대 줄 수. 2026-11 사용자 원칙: 자막은 한 줄(44px 기준 12자 안팎).
+# 긴 문장은 쉼표·띄어쓰기에서 자동으로 나누고, subtitles.txt 의 " / " 가 있으면 그 자리가 우선이다.
+MAX_LINES = 1
+
+
 def n_lines(text: str, f=None, d=None) -> int:
     if f is None:
         f, d = _measurer()
@@ -129,10 +134,10 @@ def _split_cards(rows: list[dict]) -> list[dict]:
     for r in rows:
         # subtitles.txt 에 " / " 를 넣으면 그 자리에서 카드를 나눈다(직접 지정이 자동 분할보다 우선)
         parts = [p.strip() for p in r["text"].split(" / ")] if " / " in r["text"] else [r["text"]]
-        for _ in range(2):                          # 최대 2회 분할 → 최대 4장
+        for _ in range(3):                          # 최대 3회 분할 → 최대 8장
             out = []
             for t in parts:
-                if n_lines(t, f, d) <= 2:
+                if n_lines(t, f, d) <= MAX_LINES:
                     out.append(t); continue
                 k = split_point(t)
                 out += [t[:k].strip(), t[k:].strip()] if k else [t]
@@ -149,9 +154,12 @@ def _split_cards(rows: list[dict]) -> list[dict]:
                           "dur": round(b - a, 3), "text": p})
     for i, c in enumerate(cards, 1):
         c["i"] = i
-    bad = [c["text"] for c in cards if n_lines(c["text"], f, d) > 2]
+    short = [f'{c["text"]}({c["dur"]:.2f}초)' for c in cards if c.get("dur") is not None and c["dur"] < 0.7]
+    if short:
+        print("※ 0.7초보다 짧게 스치는 자막 카드 — subtitles.txt 에 ' / ' 로 나눌 자리를 직접 정하면 고르게 된다:", ", ".join(short))
+    bad = [c["text"] for c in cards if n_lines(c["text"], f, d) > MAX_LINES]
     if bad:
-        raise SystemExit(f"아직 3줄인 자막이 있다 — 문장을 짧게 고쳐라: {bad}")
+        raise SystemExit(f"아직 {MAX_LINES}줄을 넘는 자막이 있다 — subtitles.txt 에 ' / ' 로 나누거나 문장을 짧게 고쳐라: {bad}")
     return cards
 
 

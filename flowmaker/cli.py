@@ -95,16 +95,41 @@ def cmd_style(a):
         return
     if a.name not in style.DIAG_STYLES:
         raise SystemExit(f"스타일이 없다: {a.name} (있는 것: {', '.join(style.DIAG_STYLES)})")
+    cuts = p.read_cuts_raw()
+    if getattr(a, "only", None):
+        # 컷만 바꾸기 — 한 편 안에서 그림체를 섞는다(2026-11 사용자 원칙). 편 스타일은 그대로.
+        only = {int(x) for x in a.only.split(",")}
+        out = []
+        for c in cuts:
+            if c["n"] in only:
+                if c.get("kind") != "diag":
+                    raise SystemExit(f"C{c['n']:02d} 는 diag 컷이 아니다 — 스타일은 diag 컷에만 있다")
+                src = c.get("style") or cur
+                if p.clip(c["n"]).exists() and not a.force:
+                    raise SystemExit(f"C{c['n']:02d} 는 클립이 있다 — 다시 만들 생각이면 클립을 build/rejected 로 옮기거나 --force")
+                if src != a.name:
+                    c = dict(c, prompt=style.restyle_prompt(c["prompt"], src, a.name))
+                c = {k: v for k, v in c.items() if k != "style"}
+                if a.name != cur:
+                    c["style"] = a.name
+            out.append(c)
+        p.build.mkdir(parents=True, exist_ok=True)
+        bak = p.build / f"cuts.before_style_{'_'.join(map(str, sorted(only)))}.json"
+        bak.write_text(p.cuts_path.read_text(encoding="utf-8"), encoding="utf-8")
+        p.cuts_path.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"{', '.join(f'C{n:02d}' for n in sorted(only))} → {a.name} (편 스타일 {cur} 그대로) · 이전 cuts.json → {bak}")
+        for x in style.check(out, diag_style=cur):
+            print("★위반:", x)
+        return
     if a.name == cur:
         print(f"이미 {cur} 이다"); return
-    cuts = p.read_cuts_raw()
     made = [c["n"] for c in cuts if p.clip(c["n"]).exists()]
     if made and not a.force:
         raise SystemExit(f"이미 클립이 있는 컷이 있다({', '.join(f'C{n:02d}' for n in made)}) — 한 편 안에 스타일이 섞인다. "
                          f"정말 바꾸려면 --force (클립은 그대로, 프롬프트만 바뀐다)")
     out = []
     for c in cuts:
-        if c.get("kind") == "diag":
+        if c.get("kind") == "diag" and not c.get("style"):   # 컷별 스타일을 정한 컷은 그대로
             try:
                 c = dict(c, prompt=style.restyle_prompt(c["prompt"], cur, a.name))
             except ValueError as e:
@@ -137,7 +162,9 @@ def cmd_check(a):
         raise SystemExit(f"검사 실패 — 형식 {len(problems)}건 · 정본 {len(bad)}건")
     for c in cuts:
         c["done"] = p.clip(c["n"]).exists()
-    print("통과 ·", summary(cuts), f"· diag 스타일 {st}({style.DIAG_STYLES[st]['label']})")
+    mixed = {c["n"]: c["style"] for c in cuts if c.get("kind") == "diag" and c.get("style") and c["style"] != st}
+    print("통과 ·", summary(cuts), f"· diag 스타일 {st}({style.DIAG_STYLES[st]['label']})"
+          + (" · 컷별 스타일 " + ", ".join(f"C{n:02d}={v}" for n, v in sorted(mixed.items())) if mixed else ""))
     lack = [f"C{c['n']:02d}" for c in cuts if not c.get("must") and not c.get("abstract")]
     n_must = sum(len(c.get("must") or []) for c in cuts)
     print(f"구조·고증 명세(must) {n_must}줄" + (f" · ★명세 없는 컷 {', '.join(lack)} — 사실 컷이면 must, 상징 컷이면 abstract: true"
@@ -195,6 +222,7 @@ def main(argv=None) -> None:
     s.add_argument("--title", help="편 주제 제목 — Flow 프로젝트 이름이 된다")
     s = sub.add_parser("title"); s.add_argument("project"); s.add_argument("text", nargs="?")
     s = sub.add_parser("style"); s.add_argument("project"); s.add_argument("name", nargs="?")
+    s.add_argument("--only", help="이 컷들만 바꾼다(쉼표). 컷에 \"style\" 이 붙고 편 스타일은 그대로 — 한 편 안에서 그림체 섞기")
     s.add_argument("--force", action="store_true", help="클립이 이미 있어도 바꾼다")
     for name in ("check", "status", "tts", "sync-need", "review", "subs", "sfx", "assemble"):
         s = sub.add_parser(name); s.add_argument("project")

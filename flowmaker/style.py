@@ -232,9 +232,15 @@ def check(cuts: list[dict], diag_style: str = DEFAULT_STYLE) -> list[str]:
     규칙마다 실제로 겪은 사고가 있다 — 지우지 말고 보태기만 할 것.
     """
     bad: list[str] = []
+    ep_style = diag_style
     for c in cuts:
         p, n, k = c["prompt"], c["n"], c.get("kind")
         tag = f"C{n:02d}"
+        # 컷별 스타일 (2026-11 사용자 원칙: 필요하면 한 편 안에서 그림체를 섞는다) — cuts.json "style"
+        diag_style = c.get("style") or ep_style
+        if diag_style not in DIAG_STYLES:
+            bad.append(f"{tag}: 스타일 '{diag_style}' 이 없다 (있는 것: {', '.join(DIAG_STYLES)})")
+            diag_style = ep_style
         # 01 숫자 — 엉뚱한 숫자를 그린다("3D"의 3은 예외)
         if re.search(r"\d", p.replace("3D", "")):
             bad.append(f"{tag}: 프롬프트에 숫자가 있다(엉뚱한 숫자를 그린다) — 자막으로 옮겨라")
@@ -253,7 +259,7 @@ def check(cuts: list[dict], diag_style: str = DEFAULT_STYLE) -> list[str]:
         if k == "diag" and not p.rstrip().endswith(diag_tail(diag_style).strip()):
             other = [s for s in DIAG_STYLES if s != diag_style and p.rstrip().endswith(diag_tail(s).strip())]
             bad.append(f"{tag}: diag 꼬리가 정본과 다르다 — diag_tail('{diag_style}') 을 그대로 붙여라"
-                       + (f" (지금 꼬리는 '{other[0]}' 스타일 — `style <편> {diag_style}` 로 바꿔라)" if other else ""))
+                       + (f" (지금 꼬리는 '{other[0]}' 스타일 — 이 컷만 그 스타일이면 cuts.json 에 \"style\": \"{other[0]}\")" if other else ""))
         # 11 스타일 섞임 — 다른 스타일의 말이 본문에 남으면 그 스타일로 그린다
         if k == "diag" and diag_style in _STYLE_CLASH:
             body = p.rstrip()[: -len(diag_tail(diag_style).strip())] if p.rstrip().endswith(diag_tail(diag_style).strip()) else p
