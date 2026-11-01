@@ -89,3 +89,25 @@ Flow 화면은 예고 없이 바뀐다. 그래서 CSS 선택자·좌표가 아�
 - 회수는 alt 글자 대신 "전송 전에 없던 큰 이미지(원본 256px 이상)"를 찾는다 — 이미지 결과 격자의 alt 를 실측하면
   `TEXT` 에 넣고 `pick_new_image()` 를 alt 기준으로 바꾼다.
 - 이미지 모델(Nano Banana)과 동영상 모델(Omni Flash)은 다르다. 보드는 **구도·단어 해석** 확인용이다.
+
+### 2026-10-18 프레임(첫·끝 장면) 모드 조사 — history_shorts/tools/probe_flow_frames.py (전송 없음)
+- 화면 글자가 **영어**로 나오기도 한다(같은 프로필): `Frames`/`Ingredients`, `Generating will use N credits`, 전송 aria `Start generation`.
+- 동영상 · **Frames** 를 고르면 프롬프트 상자 위에 **`Start` · `End` 칸**과 `Swap first and last frames` 버튼이 생긴다.
+- 4초 x1 720p 크레딧(Frames): Omni 1.1 Flash **7**(글만 넣을 때와 같음) · Veo 3.1 Lite 10 · Fast 20 · Quality 100.
+- 이미지 모드(Nano Banana 2.1)는 프롬프트 상자 왼쪽 `+`(aria `Add ingredients to the prompt box`)로 참고 이미지를 넣는다 — 0 크레딧.
+- 화면에 처음부터 `input[type=file]` 은 없다 → 칸을 눌러 나오는 업로드 메뉴를 찾아야 한다(2차 조사: probe_flow_frames2.py).
+
+### 2026-10-18 Veo 3.1 프레임 모드 실측(history_shorts/tools/flow_frames_submit.py --model veo-fast)
+- 프레임 모드에서 모델을 `Veo 3.1 - Fast` 로 바꾸면 **길이·해상도 버튼이 사라지고 8초 · 720p 고정**(칩 `Video · 720p · 8s crop_9_16 x1`), 20 크레딧.
+- 위 '4초 … Veo 3.1 Lite 10 · Fast 20 · Quality 100' 은 실제로는 8초 값이었다(길이를 못 바꾼 채 읽음). Lite·Quality 는 다시 볼 것.
+- 그래서 Veo 는 컷 길이(4·6초)와 맞지 않는다 → 샘플(--sample)로만 받고, 필요한 구간을 잘라 쓴다.
+
+## 2026-11 — 편마다 Flow 프로젝트 하나
+
+- 사용자 결정: 이미지(board)와 동영상(submit)을 편마다 **한 Flow 프로젝트**에서 만든다. 전에는 부를 때마다 '새 프로젝트'를 만들어 목록이 흩어졌다.
+- 처음 board/submit 때 만든 프로젝트 주소가 `projects/<편>/project.json` 의 `"flow_url"` 에 적힌다(`open_flow_project`). 이후에는 그 주소를 연다. 열리지 않으면(지운 프로젝트 등) 새로 만들어 주소를 바꿔 적는다.
+- 한 격자에 이미지·다른 길이 그룹·버린 클립이 섞이므로 collect 는 개수로 매핑하지 않는다: 최신 썸네일부터 열어 프롬프트로 컷을 찾고(`match_prompts`), 이미 받아 간 클립(`build/flow_seen.json` 의 taken)에 닿으면 멈춘다(`plan_collect`). 한 번 연 썸네일은 flow_seen.json 에 기억해 다시 열지 않는다.
+- 새 편부터 일부러 새 프로젝트로 시작하려면 project.json 의 flow_url 을 지운다.
+- **프로젝트 이름 = 편 제목.** `project.json` 의 `"title"`(`new <편> --title "…"` · `title <편> "…"`, 없으면 폴더 이름)을 Flow 프로젝트를 열 때 이름으로 바꾼다(`ensure_flow_title`). 바뀐 게 확인되면 `"flow_titled"` 에 적고 다음부터 건너뛴다.
+  2026-11 실측: 머리글 왼쪽 `home <이름> more_vert` 의 `<input aria-label="Editable text">`(기본값 'Nov 01 - 15:17' 같은 날짜). 클릭 → 전체 선택 → 입력 → Enter 로 바뀐다. 오른쪽 검색칸(aria Search)은 제외.
+  실패해도 생성은 계속하고 `build/flow_title_probe.json`(머리글 후보 목록) · `flow_title_fail.png` 를 남긴다. 그걸 보고 `pick_title_candidate` 규칙을 고친다.

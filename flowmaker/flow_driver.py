@@ -4,15 +4,17 @@
 흐름
     login    창을 띄워 사용자가 구글에 로그인한다. 쿠키는 ~/.flowmaker/profile 에 남는다(한 번만).
              ★같은 창에서 생성 설정(동영상 · 세로 9:16 · 출력 1개)을 한 번 맞춰 둔다 — Flow 는 계정별로 기억한다.
-    submit   길이 그룹(4/6/8/10초) 하나를 새 프로젝트에 제출하고 프로젝트 URL과 **실제로 전송된 컷 순서**를 저장한다.
+    submit   길이 그룹(4/6/8/10초) 하나를 이 편의 Flow 프로젝트에 제출하고 **실제로 전송된 컷 순서**를 저장한다.
              ★제출 직전에 style.check() 를 다시 돌린다 — 크레딧을 쓰기 전 마지막 관문.
     collect  저장된 프로젝트를 다시 열어 생성이 끝난 클립을 내려받는다. 기다리지 않는다 —
              덜 됐으면 종료코드 2로 빠지므로 잠시 뒤 다시 부르면 된다.
 
-왜 제출과 회수를 나눴나
-    생성에는 몇 분이 걸리고 길이 그룹마다 프로젝트를 따로 두는 편이 매핑이 안전하다.
-    한 프로젝트 안에서 화면의 동영상 순서는 "최신이 위"라서, 제출 역순으로 매핑한다.
-    화면의 동영상 수가 제출 수와 **정확히 같을 때만** 회수한다 — 많으면 출력 개수 설정이 1이 아닌 것이다.
+편마다 Flow 프로젝트 하나 (2026-11 사용자 결정)
+    전에는 board·submit 을 부를 때마다 새 프로젝트를 만들어 Flow 목록이 편 하나에 여러 개로 흩어졌다.
+    이제 처음 연 프로젝트 주소를 project.json "flow_url" 에 적고, 이후 board(이미지)·submit(동영상)이 모두 그 프로젝트를 다시 연다.
+    그래서 한 프로젝트 격자에 이미지·이전 클립·버린 클립이 섞인다 → collect 는 개수로 매핑하지 않고,
+    최신 썸네일부터 열어 **프롬프트로 컷을 찾고**, 이미 받아 간 클립(build/flow_seen.json 의 taken)에 닿으면 멈춘다.
+    재생성한 컷이 아직 생성 중이면 옛 클립까지 내려가기 전에 taken 에 닿아 멈추므로 옛 클립을 새 것으로 잘못 받지 않는다.
 
 화면 요소를 찾는 법
     Flow 화면은 자주 바뀐다. 그래서 CSS 선택자 대신 **버튼에 적힌 글자**로 찾는다
@@ -97,19 +99,23 @@ def map_clips(order: list[int], urls: list[str]) -> dict[int, str]:
     return dict(zip(order[::-1], urls))
 
 
-def match_prompts(prompts: dict[int, str], pages: list[str], head: int = 160) -> list[int | None]:
+def match_prompts(prompts: dict[int, str], pages: list[str], head: int = 160, prefer: set | None = None) -> list[int | None]:
     """상세 화면 글자마다 그 안에 들어 있는 컷 프롬프트를 찾아 컷 번호를 돌려준다.
 
     2026-10 Flow 는 클립을 열면 생성에 쓴 프롬프트 전문이 보인다 — 화면 순서(최신순) 가정 대신 이걸로 매핑한다.
     전문이 안 맞으면 앞부분(head 글자)으로 한 번 더 본다. 0개 또는 2개 이상 맞으면 None.
     """
-    norm = lambda x: " ".join((x or "").split())
+    # 2026-11: Flow 상세 화면은 ' 를 ’ 로 바꿔 보여준다(경복궁 "palace's") — 따옴표·대시를 맞춘 뒤 비교한다
+    _q = str.maketrans({"\u2019": "'", "\u2018": "'", "\u201c": '"', "\u201d": '"', "\u2013": "-", "\u2014": "-", "\u00a0": " "})
+    norm = lambda x: " ".join((x or "").translate(_q).split())
     out: list[int | None] = []
     for t in pages:
         t = norm(t)
         hits = [n for n, pr in prompts.items() if norm(pr) and norm(pr) in t]
         if not hits:
             hits = [n for n, pr in prompts.items() if norm(pr) and norm(pr)[:head] in t]
+        if len(hits) > 1 and prefer:                 # 2026-11 경복궁: 보드만 다르고 영상 프롬프트가 같은 컷(C02·C03) — 이번에 찾는 컷을 고른다
+            hits = [n for n in hits if n in prefer] or hits
         out.append(hits[0] if len(hits) == 1 else None)
     return out
 
@@ -130,13 +136,22 @@ _JS_FIND = """
   const vis = e => { const r = e.getBoundingClientRect();
     return r.width > 8 && r.height > 8 && r.bottom > 0 && r.top < innerHeight
            && getComputedStyle(e).visibility !== "hidden"; };
-  const el = [...document.querySelectorAll("button,[role=button],a")].filter(vis)
+  const el = [...document.querySelectorAll("button,[role=button],[role=tab],[role=menuitem],[role=menuitemradio],[role=option],[role=radio],a")].filter(vis)
     .find(e => rx.test((e.innerText || "").replace(/\\s+/g, " ").trim()));
   if (!el) return null;
   const r = el.getBoundingClientRect();
   return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2),
            text: (el.innerText || "").replace(/\\s+/g, " ").trim().slice(0, 60) };
 }
+"""
+
+
+_JS_PANEL_ITEMS = """
+() => [...document.querySelectorAll("button,[role],a,li")].filter(e => {
+    const r = e.getBoundingClientRect(); return r.width > 4 && r.height > 4 && r.top < innerHeight && r.bottom > 0; })
+  .map(e => ({ tag: e.tagName, role: e.getAttribute("role") || "", aria: e.getAttribute("aria-label") || "",
+               text: (e.innerText || "").replace(/\\s+/g, " ").trim().slice(0, 50),
+               y: Math.round(e.getBoundingClientRect().y) })).slice(0, 150)
 """
 
 
@@ -285,8 +300,23 @@ def configure_video(page, length: int) -> str:
     hit = find_settings(page)
     if not hit:
         raise SystemExit("설정 칩을 못 찾았다 — 제출하지 않았다")
-    page.mouse.click(hit["x"], hit["y"]); page.wait_for_timeout(1200)
-    click_text(page, TEXT["video_mode"], "동영상 모드", 1200)     # 이미지 모드였다면 여기서 패널이 동영상 설정으로 바뀐다
+    # 2026-11: 편마다 한 프로젝트를 쓰면서 board(이미지) 뒤에 같은 프로젝트로 submit 하게 됐다 — 칩이 이미지 모드로 남아 있다.
+    # 첫 시도에서 패널 안 '동영상'을 못 찾았다(패널이 안 열렸거나 다른 요소) → 열린 화면을 남기고 한 번 더 연다.
+    page.mouse.click(hit["x"], hit["y"]); page.wait_for_timeout(1500)
+    if not click_text(page, TEXT["video_mode"], "동영상 모드", 1500):  # 이미지 모드였다면 여기서 패널이 동영상 설정으로 바뀐다
+        dbg = Path.cwd() / "flow_video_mode_debug"
+        try:
+            page.screenshot(path=str(dbg) + ".png")
+            dbg.with_suffix(".json").write_text(json.dumps(page.evaluate(_JS_PANEL_ITEMS), ensure_ascii=False, indent=1),
+                                                encoding="utf-8")
+            _log(f"  진단 → {dbg}.png · {dbg.with_suffix('.json').name}")
+        except Exception:
+            pass
+        page.keyboard.press("Escape"); page.wait_for_timeout(700)
+        hit = find_settings(page)
+        if hit:
+            page.mouse.click(hit["x"], hit["y"]); page.wait_for_timeout(2000)
+            click_text(page, TEXT["video_mode"], "동영상 모드(다시)", 1500)
     click_text(page, TEXT["portrait"], "세로 9:16", 700)
     m = page.evaluate(_JS_FIND_ARIA, TEXT["model_aria"])
     if m and not re.search(TEXT["model"], m["text"]):
@@ -361,10 +391,122 @@ def login(timeout_min: int = 10) -> None:
         ctx.close()
         raise SystemExit("시간 안에 로그인이 확인되지 않았습니다 — 다시 `login` 을 실행하세요")
 
+_JS_TITLE_CANDS = """
+() => {
+  // 프로젝트 화면 위쪽(머리글)의 '프로젝트 이름' 후보 — 입력칸·편집 가능 글자·짧은 글자 순으로.
+  // Flow 화면 구조를 아직 실측하지 못했다(2026-11) → 후보 목록을 build/flow_title_probe.json 에 남긴다.
+  const vis = e => { const r = e.getBoundingClientRect();
+    return r.width > 20 && r.height > 10 && r.top >= 0 && r.top < 110 && getComputedStyle(e).visibility !== "hidden"; };
+  const icon = t => /^[a-z_]+$/.test(t);              // 머티리얼 아이콘 글자(arrow_back 등)
+  const out = [];
+  for (const e of document.querySelectorAll('input,textarea,[contenteditable="true"],[role="textbox"],h1,h2,button,span,div,a')) {
+    if (!vis(e)) continue;
+    const isInput = /^(INPUT|TEXTAREA)$/.test(e.tagName) || e.isContentEditable || e.getAttribute("role") === "textbox";
+    const t = (isInput ? (e.value || e.innerText || e.getAttribute("aria-label") || "") : (e.innerText || "")).replace(/\\s+/g, " ").trim();
+    if (!isInput && (e.children.length > 2 || !t || t.length > 60 || icon(t))) continue;
+    const r = e.getBoundingClientRect();
+    out.push({ tag: e.tagName, input: isInput, text: t.slice(0, 60), aria: e.getAttribute("aria-label") || "",
+               x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), w: Math.round(r.width) });
+  }
+  return out;
+}
+"""
+
+_JS_ACTIVE_EDIT = """
+() => { const e = document.activeElement; if (!e) return null;
+  const ok = /^(INPUT|TEXTAREA)$/.test(e.tagName) || e.isContentEditable;
+  return ok ? (e.value !== undefined && e.tagName !== "DIV" ? e.value : e.innerText) : null; }
+"""
+
+# 프로젝트 이름 자리에 흔히 보이는 기본 이름 (날짜·'제목 없음' 등) — 후보를 고를 때 우선한다
+_DEFAULT_TITLE_RX = re.compile(r"(제목 없|Untitled|새 프로젝트|New project|\d{1,2}[./:\- ]\d{1,2}|"
+                               r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.? \d|\d+월 \d+일)", re.I)
+_SKIP_TITLE_RX = re.compile(r"^(Flow|Google Flow|공유|Share|내보내기|Export|에이전트|Agent|로그인|Sign in)$", re.I)
+
+
+def pick_title_candidate(cands: list[dict], current_title: str = "") -> dict | None:
+    """머리글 후보에서 '프로젝트 이름'으로 보이는 것 하나 (순수 로직 — 테스트 대상).
+    입력칸 > 지금 제목과 같은 글자 > 기본 이름(날짜·제목 없음) 모양 > 가장 왼쪽 짧은 글자."""
+    c = [x for x in cands if not _SKIP_TITLE_RX.match(x.get("text", ""))
+         and not re.match(r"^(Search|검색)$", x.get("aria", ""), re.I)]
+    # 2026-11 실측: 머리글 왼쪽 'home <이름> more_vert' 안의 <input aria-label="Editable text" value="Nov 01 - 15:17">
+    for rule in (lambda x: x.get("input") and re.search(r"Editable|편집", x.get("aria", ""), re.I),
+                 lambda x: x.get("input"),
+                 lambda x: current_title and x.get("text") == current_title,
+                 lambda x: _DEFAULT_TITLE_RX.search(x.get("text", ""))):
+        hit = [x for x in c if rule(x)]
+        if hit:
+            return sorted(hit, key=lambda x: x.get("x", 0))[0]
+    return None
+
+
+def ensure_flow_title(page, project: Project) -> bool:
+    """Flow 프로젝트 이름을 편 제목(project.title)으로 바꾼다. 이미 확인됐으면 건너뛴다.
+    실패해도 생성은 계속한다(이름은 부가 기능) — 후보 목록·화면을 build/ 에 남겨 TEXT·규칙을 고칠 수 있게 한다."""
+    title = project.title
+    if project.config().get("flow_titled") == title:
+        return True
+    project.build.mkdir(parents=True, exist_ok=True)
+    probe = project.build / "flow_title_probe.json"
+    try:
+        cands = page.evaluate(_JS_TITLE_CANDS)
+        hit = pick_title_candidate(cands, project.config().get("flow_titled") or "")
+        ok = False
+        if hit:
+            for click in ("click", "dblclick"):
+                getattr(page.mouse, click)(hit["x"], hit["y"]); page.wait_for_timeout(700)
+                if page.evaluate(_JS_ACTIVE_EDIT) is not None:
+                    page.keyboard.press("Meta+A" if sys.platform == "darwin" else "Control+A")
+                    page.keyboard.type(title, delay=0)
+                    page.keyboard.press("Enter"); page.wait_for_timeout(1200)
+                    page.keyboard.press("Escape"); page.wait_for_timeout(400)
+                    ok = any(title in (x.get("text") or "") for x in page.evaluate(_JS_TITLE_CANDS))
+                    break
+                page.keyboard.press("Escape"); page.wait_for_timeout(300)
+        probe.write_text(json.dumps({"title": title, "picked": hit, "ok": ok, "candidates": cands},
+                                    ensure_ascii=False, indent=1), encoding="utf-8")
+        if ok:
+            project.set_config("flow_titled", title)
+            _log(f"  Flow 프로젝트 이름 → {title}")
+            return True
+        page.screenshot(path=str(project.build / "flow_title_fail.png"))
+        _log(f"  ★Flow 프로젝트 이름을 못 바꿨다(생성은 계속) — {probe.name} · flow_title_fail.png 를 보고 고친다")
+    except Exception as e:                                   # 이름 때문에 생성을 멈추지 않는다
+        _log(f"  ★Flow 프로젝트 이름 바꾸기 오류(생성은 계속): {e}")
+    return False
+
+
+
+def open_flow_project(page, project: Project) -> str:
+    """이 편의 Flow 프로젝트를 연다 — project.json "flow_url" 이 있으면 그것을, 없으면 '새 프로젝트'를 만들어 주소를 적어 둔다.
+    (로그인 확인이 끝난 page 를 받는다.)"""
+    url = project.flow_url
+    if url:
+        page.goto(url, wait_until="domcontentloaded", timeout=90_000)
+        page.wait_for_timeout(7000)
+        dismiss_modals(page)
+        if "/project/" in page.url:
+            _log(f"프로젝트(이 편 것을 이어 씀): {page.url}")
+            ensure_flow_title(page, project)
+            return page.url
+        _log(f"  저장된 프로젝트를 열지 못했다(지금 주소 {page.url}) — 새로 만든다")
+        page.goto(FLOW_URL, wait_until="domcontentloaded", timeout=90_000)
+        page.wait_for_timeout(7000)
+        dismiss_modals(page)
+    if not click_text(page, TEXT["new_project"], "새 프로젝트", 9000):
+        raise SystemExit("'새 프로젝트' 버튼을 못 찾았다 — guides/flow-ui.md 를 보고 TEXT 를 고쳐라")
+    page.wait_for_timeout(1500)
+    project.set_flow_url(page.url)
+    project.set_config("flow_titled", None)
+    _log(f"프로젝트(새로 만듦 → project.json flow_url): {page.url}")
+    page.wait_for_timeout(2500)
+    ensure_flow_title(page, project)
+    return page.url
+
 
 def submit(project: Project, length: int, only: set[int] | None = None, headless: bool = False) -> Path:
     cuts = project.load_cuts()
-    targets = [c for c in cuts if not c["done"] and c["len"] == length
+    targets = [c for c in cuts if not c["done"] and c["len"] == length and c.get("engine", "flow") == "flow"
                and (only is None or c["n"] in only)]
     if not targets:
         _log(f"[{length}s] 제출할 컷 없음")
@@ -398,11 +540,8 @@ def submit(project: Project, length: int, only: set[int] | None = None, headless
             if not logged_in(page):
                 raise SystemExit("로그인이 안 돼 있다 — 먼저 `login` 을 실행하라")
 
-            if not click_text(page, TEXT["new_project"], "새 프로젝트", 9000):
-                raise SystemExit("'새 프로젝트' 버튼을 못 찾았다 — guides/flow-ui.md 를 보고 TEXT 를 고쳐라")
-            url = page.url
+            url = open_flow_project(page, project)
             save()
-            _log(f"프로젝트: {url}")
 
             page.keyboard.press("Escape"); page.wait_for_timeout(500)
             if not ensure_direct_mode(page, project.build):
@@ -451,7 +590,8 @@ _JS_THUMBS = """
   const rx = new RegExp(pattern);
   return [...document.querySelectorAll("img")].filter(i => rx.test(i.alt || "")).map(i => {
     const r = i.getBoundingClientRect();
-    return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), w: Math.round(r.width) };
+    return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), w: Math.round(r.width),
+             src: i.currentSrc || i.src || "" };
   });
 }
 """
@@ -476,20 +616,51 @@ def _thumbs(page, want: int = 0, timeout_ms: int = 12_000) -> list[dict]:
     return th
 
 
+def url_key(u: str | None) -> str:
+    """서명 붙은 주소의 ?쿼리·#조각을 떼어 같은 파일이면 같은 키가 되게 한다."""
+    return (u or "").split("#")[0].split("?")[0]
+
+
+def plan_collect(order: list[int], recs: list[dict]) -> tuple[dict[int, int], bool]:
+    """최신순 썸네일 기록(recs: {"cut": n|None, "taken": bool})에서 이번 그룹(order) 컷의 위치를 고른다 — 순수 로직.
+
+    · 위에서부터 보며 같은 컷은 처음(=가장 최신) 것만 쓴다.
+    · 이미 받아 간 클립(taken)에 닿으면 멈춘다 — 그 아래는 이번 제출보다 오래된 것이다.
+    돌려주는 값: ({컷: 인덱스}, 멈춤 여부)
+    """
+    want, found = set(order), {}
+    for k, r in enumerate(recs):
+        if r.get("taken"):
+            return found, True
+        n = r.get("cut")
+        if n in want and n not in found:
+            found[n] = k
+    return found, False
+
+
 def collect(project: Project, length: int, headless: bool = False) -> int:
-    """2026-10 Flow: 격자에는 썸네일만 있다. 썸네일을 하나씩 열어 상세 화면의 <video> 주소와 프롬프트를 읽고,
-    프롬프트로 컷을 찾아(match_prompts) 내려받는다."""
+    """썸네일을 최신순으로 하나씩 열어 상세 화면의 <video> 주소와 프롬프트를 읽고, 프롬프트로 컷을 찾아 내려받는다.
+
+    편마다 Flow 프로젝트 하나라 격자에 다른 길이 그룹·예전 클립·버린 클립이 섞여 있다(2026-11).
+    한 번 연 썸네일은 build/flow_seen.json 에 기억해 다시 열지 않는다(다시 부를 때 빠르다).
+    """
     meta_path = project.build / f"submit_{length}s.json"
     if not meta_path.exists():
         raise SystemExit(f"{meta_path.name} 이 없다 — 먼저 `submit {length}` 를 실행하라")
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
-    url, order = meta["url"], meta["order"]
+    url, order = meta.get("url") or project.flow_url, meta["order"]
     if not order:
         raise SystemExit("제출된 컷이 없다 (order 비어 있음)")
-    prompts = {c["n"]: c["prompt"] for c in project.load_cuts() if c["n"] in order}
+    all_prompts = {c["n"]: c["prompt"] for c in project.load_cuts()}
+
+    seen_path = project.build / "flow_seen.json"
+    seen: dict = json.loads(seen_path.read_text(encoding="utf-8")) if seen_path.exists() else {}
+    save_seen = lambda: seen_path.write_text(json.dumps(seen, ensure_ascii=False, indent=1), encoding="utf-8")
+    taken_videos = {v.get("video") for v in seen.values() if v.get("taken")}
 
     project.clips.mkdir(parents=True, exist_ok=True)
     got: dict[int, float] = {}
+    picked: dict[int, str] = {}           # 컷 → 썸네일 키
     from playwright.sync_api import sync_playwright
     with sync_playwright() as pw:
         ctx = _context(pw, headless=headless)
@@ -500,67 +671,213 @@ def collect(project: Project, length: int, headless: bool = False) -> int:
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=90_000)
             page.wait_for_timeout(9000)
-            th = _thumbs(page, len(order))
-            state = readiness(len(th), len(order))
-            _log(f"[{length}s] 화면의 완성 클립 {len(th)}개 / 제출 {len(order)}개 → {state}")
-            if state == "pending":
-                _log("아직 생성 중 — 잠시 뒤 다시 실행하라")
-                sys.exit(EXIT_NOT_READY)
-            if state == "too_many":
-                raise SystemExit("클립이 제출 수보다 많다 — 출력 개수 설정이 1이 아니거나 다른 생성물이 섞였다. "
-                                 "프로젝트를 브라우저에서 열어 확인하라")
-
-            details = []
+            th = _thumbs(page, 1)
+            _log(f"[{length}s] 프로젝트의 완성 클립 썸네일 {len(th)}개 · 이번에 찾을 컷 {order}")
+            recs: list[dict] = []
             for k in range(len(th)):
-                if k:                                            # 매번 프로젝트를 새로 연다 (뒤로가기는 가끔 격자를 못 살린다)
-                    page.goto(url, wait_until="domcontentloaded", timeout=90_000)
-                    page.wait_for_timeout(6000)
-                    th = _thumbs(page, len(order))
-                    if len(th) <= k:
-                        _log(f"  격자를 다시 열었더니 썸네일이 {len(th)}개뿐 — 잠시 뒤 다시")
+                key = url_key(th[k].get("src"))           # 썸네일 주소가 없으면 기억하지 않는다(위치는 바뀌므로)
+                rec = seen.get(key) if key else None
+                if rec is not None and rec.get("cut") is None and not rec.get("taken"):
+                    if "text" in rec:                            # 글이 남아 있으면 다시 열지 않고 지금 규칙으로 다시 맞춰 본다
+                        rec["cut"] = match_prompts(all_prompts, [rec["text"]], prefer=set(order))[0]
+                    else:
+                        rec = None                               # 예전 판(글 미보관)에서 못 맞춘 것 — 다시 열어 본다
+                if rec is None:
+                    if k:                                        # 매번 프로젝트를 새로 연다 (뒤로가기는 가끔 격자를 못 살린다)
+                        page.goto(url, wait_until="domcontentloaded", timeout=90_000)
+                        page.wait_for_timeout(6000)
+                        th2 = _thumbs(page, k + 1)
+                        if len(th2) <= k:
+                            _log(f"  격자를 다시 열었더니 썸네일이 {len(th2)}개뿐 — 잠시 뒤 다시")
+                            sys.exit(EXIT_NOT_READY)
+                    page.evaluate("""([pattern, k]) => { const rx = new RegExp(pattern);
+                        const im = [...document.querySelectorAll("img")].filter(i => rx.test(i.alt || ""))[k];
+                        if (im) im.scrollIntoView({block: "center"}); }""", [TEXT["thumb_alt"], k])
+                    page.wait_for_timeout(800)
+                    th2 = _thumbs(page, k + 1)
+                    if url_key(th2[k].get("src")) != url_key(th[k].get("src")):
+                        _log("  격자 순서가 바뀌었다(새 클립이 생겼다) — 잠시 뒤 다시")
                         sys.exit(EXIT_NOT_READY)
-                # 화면 밖이면 스크롤해 보이게 한 뒤 위치를 다시 잰다
-                page.evaluate("""([pattern, k]) => { const rx = new RegExp(pattern);
-                    const im = [...document.querySelectorAll("img")].filter(i => rx.test(i.alt || ""))[k];
-                    if (im) im.scrollIntoView({block: "center"}); }""", [TEXT["thumb_alt"], k])
-                page.wait_for_timeout(800)
-                th = _thumbs(page, len(order))
-                page.mouse.click(th[k]["x"], th[k]["y"])
-                d = None
-                for _ in range(40):
-                    page.wait_for_timeout(500)
-                    d = page.evaluate(_JS_DETAIL)
-                    if d["src"]:
-                        break
-                if not d or not d["src"]:
-                    try:
-                        page.screenshot(path=str(project.build / "collect_fail.png"))
-                        _log(f"  진단 화면 → {project.build / 'collect_fail.png'} (주소 {page.url})")
-                    except Exception:
-                        pass
-                    _log(f"  {k + 1}번째 클립에서 동영상을 못 찾았다 — 잠시 뒤 다시")
-                    sys.exit(EXIT_NOT_READY)
-                details.append(d)
-                _log(f"  {k + 1}/{len(th)} 클립 주소 확보")
+                    page.mouse.click(th2[k]["x"], th2[k]["y"])
+                    d = None
+                    for _ in range(40):
+                        page.wait_for_timeout(500)
+                        d = page.evaluate(_JS_DETAIL)
+                        if d["src"]:
+                            break
+                    if not d or not d["src"]:
+                        try:
+                            page.screenshot(path=str(project.build / "collect_fail.png"))
+                            _log(f"  진단 화면 → {project.build / 'collect_fail.png'} (주소 {page.url})")
+                        except Exception:
+                            pass
+                        _log(f"  {k + 1}번째 클립에서 동영상을 못 찾았다 — 잠시 뒤 다시")
+                        sys.exit(EXIT_NOT_READY)
+                    cut = match_prompts(all_prompts, [d["text"]], prefer=set(order))[0]
+                    rec = {"video": d["src"], "cut": cut, "taken": url_key(d["src"]) in {url_key(v) for v in taken_videos},
+                           "text": " ".join((d["text"] or "").split())[:6000]}   # 못 맞췄을 때 원인을 보려고 앞부분을 남긴다
+                    if key:
+                        seen[key] = rec
+                        save_seen()
+                    _log(f"  {k + 1}번째 썸네일 → " + (f"C{cut:02d}" if cut else "이 편 컷 아님/프롬프트 바뀜")
+                         + (" (이미 받아 간 클립)" if rec["taken"] else ""))
+                recs.append(rec)
+                found, stopped = plan_collect(order, recs)
+                if len(found) == len(order) or stopped:
+                    break
 
-            cuts_of = match_prompts(prompts, [d["text"] for d in details])
-            if None in cuts_of or len(set(cuts_of)) != len(cuts_of) or set(cuts_of) != set(order):
-                raise SystemExit(f"프롬프트로 컷을 다 맞추지 못했다 (찾은 컷: {cuts_of} / 제출: {order}) — 받지 않았다")
+            found, _ = plan_collect(order, recs)
+            missing = [n for n in order if n not in found]
+            if missing:
+                _log(f"  아직 안 보이는 컷 {missing} — 생성 중이면 잠시 뒤 다시")
+                sys.exit(EXIT_NOT_READY)
 
-            for n, d in zip(cuts_of, details):
-                r = ctx.request.get(d["src"], timeout=180_000)
+            for n, k in found.items():
+                rec = recs[k]
+                r = ctx.request.get(rec["video"], timeout=180_000)
                 if not r.ok:
                     raise SystemExit(f"C{n:02d} 내려받기 실패 (HTTP {r.status})")
                 project.clip(n).write_bytes(r.body())
+                rec["taken"] = True
+                save_seen()
         finally:
             ctx.close()
 
-    for n in sorted(cuts_of):
+    for n in sorted(found):
         got[n] = _duration(project.clip(n))
         _log(f"  C{n:02d} ← {got[n]:.2f}s")
     (project.build / f"collected_{length}s.json").write_text(json.dumps(got), encoding="utf-8")
     _log(f"[{length}s] 회수 {len(got)}/{len(order)}")
     return len(got)
+
+
+# ── frames: 확인된 보드 이미지를 첫 장면(Start)으로 영상 만들기 (2026-11 쇼츠로 가져옴 — longform_studio/longmaker/frames.py 와 같은 경로)
+# 왜: Flow 글→영상은 보드를 따르지 않고(온돌·zero15 C03), 질감도 첫 프레임 품질을 못 따라간다.
+# cuts.json 의 컷에 "engine": "frames" 를 적으면 submit(글→영상)은 건너뛰고 이 명령이 맡는다. 크레딧은 글→영상과 같다.
+# 이 편의 Flow 프로젝트 하나에 보내고 build/submit_<len>s.json 에 적어 두므로 회수는 그냥 `collect <편> <len>`.
+# 보드의 AI 마크는 build/board_clean/C##.jpg (VM 에서 지운 판)가 있으면 그것을 쓴다 — 영상에 별이 두 개 생기지 않게.
+
+def _set_start_frame(page, img: Path, tag: str, shot) -> None:
+    slot_rx = r"^(Start|시작)$"
+    if not click_text(page, slot_rx, f"{tag} 시작 칸", 2000):
+        shot(f"{tag}_no_slot"); raise SystemExit(f"{tag} 시작(Start) 칸을 못 찾았다 — 보내지 않았다")
+    hit = page.evaluate(_JS_FIND, r"Upload media|미디어 업로드")
+    if not hit:
+        shot(f"{tag}_no_dialog"); raise SystemExit("'Select a frame image' 창이 안 떴다 — 보내지 않았다")
+    with page.expect_file_chooser(timeout=10_000) as fc:
+        page.mouse.click(hit["x"], hit["y"])
+    fc.value.set_files(str(img))
+    page.wait_for_timeout(3000)
+    if page.evaluate(_JS_FIND, r"^I agree$|^동의$"):
+        shot(f"{tag}_rights")
+        print("\n★ Flow 창에 'Rights to use this image' 확인이 떴습니다. 읽고 직접 'I agree'(동의)를 눌러 주세요(3분 기다림).\n", flush=True)
+        for _ in range(90):
+            page.wait_for_timeout(2000)
+            if not page.evaluate(_JS_FIND, r"^I agree$|^동의$"):
+                break
+        else:
+            raise SystemExit("동의 창이 닫히지 않았다 — 보내지 않았다")
+    stem = img.stem[:16]
+    JS_ITEM = """(stem) => { const vis = e => { const r = e.getBoundingClientRect(); return r.width > 40 && r.height > 20; };
+            const el = [...document.querySelectorAll("button,[role=button],[role=option],li,div")].filter(vis)
+              .filter(e => (e.innerText || "").trim().startsWith(stem) && (e.innerText || "").length < 80)
+              .sort((x, y) => x.getBoundingClientRect().height - y.getBoundingClientRect().height)[0];
+            if (!el) return null; const r = el.getBoundingClientRect();
+            return {x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: el.innerText.trim()}; }"""
+    filled = False
+    for _ in range(60):
+        page.wait_for_timeout(1000)
+        if not page.evaluate(_JS_FIND, slot_rx) and not page.evaluate(_JS_FIND, r"Upload media|미디어 업로드"):
+            filled = True; break
+        if page.evaluate(_JS_FIND, r"^\d{1,2}%$"):
+            continue
+        if page.evaluate(_JS_FIND, r"^(Add to prompt|프롬프트에 추가)$"):
+            item = page.evaluate(JS_ITEM, stem)
+            if item:
+                page.mouse.click(item["x"], item["y"]); page.wait_for_timeout(1500)
+                click_text(page, r"^(Add to prompt|프롬프트에 추가)$", "Add to prompt", 2500)
+    if not filled and not page.evaluate(_JS_FIND, slot_rx):
+        filled = True
+    if not filled:
+        shot(f"{tag}_not_filled"); raise SystemExit(f"{tag} 시작 칸에 그림이 안 들어갔다 — 보내지 않았다")
+    shot(f"{tag}_set")
+    _log(f"  {tag} 시작 프레임 ← {img.name}")
+
+
+def frames(project: Project, only: set[int] | None = None, headless: bool = False) -> int:
+    import shutil
+    cuts = project.load_cuts()
+    targets = [c for c in cuts if c.get("engine") == "frames" and not c["done"] and (only is None or c["n"] in only)]
+    if not targets:
+        _log("[frames] 제출할 컷 없음 (cuts.json 에 \"engine\": \"frames\" 인 미생성 컷)"); return 0
+    board = project.build / "board"
+    def start_img(n: int) -> Path | None:
+        for d in (project.build / "board_clean", board):
+            hit = sorted(d.glob(f"C{n:02d}.*")) if d.exists() else []
+            if hit:
+                return hit[0]
+        return None
+    nob = [c["n"] for c in targets if not start_img(c["n"])]
+    if nob:
+        raise SystemExit(f"보드 이미지가 없는 컷: {nob} — board 로 먼저 뽑고 사용자 확인을 받는다")
+    bad = gate_violations(targets, cuts, project.style)
+    if bad:
+        for b in bad:
+            print("★위반:", b)
+        raise SystemExit("정본 검증 실패 — 제출하지 않았다 (크레딧 0)")
+    _log(f"[frames] {len(targets)}컷 · 크레딧 약 {sum(CREDITS[c['len']] for c in targets)}: "
+         + ", ".join(f"C{c['n']:02d}" for c in targets))
+    dbg = project.build / "frames_submit"; dbg.mkdir(parents=True, exist_ok=True)
+    sent = 0
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as pw:
+        ctx = _context(pw, headless=headless)
+        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+        shot = lambda n: page.screenshot(path=str(dbg / f"{n}.png"))
+        try:
+            page.goto(FLOW_URL, wait_until="domcontentloaded", timeout=90_000); page.wait_for_timeout(7000)
+            dismiss_modals(page)
+            if not logged_in(page):
+                raise SystemExit("로그인이 안 돼 있다 — 먼저 `login` 을 실행하라")
+            url = open_flow_project(page, project)
+            for c in targets:
+                L = int(c["len"]); tag = f"C{c['n']:02d}"
+                page.keyboard.press("Escape"); page.wait_for_timeout(500)
+                if not ensure_direct_mode(page, dbg):
+                    raise SystemExit("직접 생성 모드(설정 칩)를 찾지 못했다")
+                hit = find_settings(page); page.mouse.click(hit["x"], hit["y"]); page.wait_for_timeout(1500)
+                click_text(page, TEXT["video_mode"], "동영상 모드", 1200)
+                if not click_text(page, r"^(crop_free )?(프레임|Frames?)$", "프레임(Frames)", 1000):
+                    shot(f"{tag}_no_frames_tab")
+                page.keyboard.press("Escape"); page.wait_for_timeout(700)
+                configure_video(page, L)
+                src = start_img(c["n"])
+                tmp = dbg / f"{tag}_start_{time.strftime('%H%M%S')}{src.suffix}"; shutil.copyfile(src, tmp)
+                _set_start_frame(page, tmp, tag, shot)
+                ed = _editor(page); ed.click(timeout=15_000)
+                page.keyboard.press("Meta+A" if sys.platform == "darwin" else "Control+A"); page.keyboard.press("Delete")
+                page.keyboard.type(c["prompt"], delay=0); page.wait_for_timeout(900)
+                if len("".join(ed.inner_text().split())) < len("".join(c["prompt"].split())) * 0.95:
+                    raise SystemExit(f"{tag} 프롬프트 입력이 잘렸다 — 보내지 않았다")
+                hit = find_settings(page); page.mouse.click(hit["x"], hit["y"]); page.wait_for_timeout(1200)
+                cr = page.evaluate(_JS_CREDIT, TEXT["credit"]); page.keyboard.press("Escape"); page.wait_for_timeout(700)
+                if cr != CREDITS[L]:
+                    shot(f"{tag}_credit"); raise SystemExit(f"{tag} 표시 크레딧 {cr} ≠ 예상 {CREDITS[L]} — 보내지 않았다")
+                if not click_text(page, TEXT["send"], "전송", 3500):
+                    raise SystemExit("전송 버튼을 못 찾았다")
+                meta_path = project.build / f"submit_{L}s.json"
+                meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {"url": url, "order": []}
+                meta["url"] = url
+                meta["order"] = [n for n in meta.get("order", []) if n != c["n"]] + [c["n"]]
+                meta_path.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+                sent += 1
+                _log(f"  {tag} 제출(보드→영상 · {cr} 크레딧) {sent}/{len(targets)}")
+                page.wait_for_timeout(6000)
+            _log("  마지막 전송이 Flow 에 닿도록 20초 기다린다"); page.wait_for_timeout(20_000)
+        finally:
+            ctx.close()
+    _log(f"[frames] {sent}컷 제출 → 2~4분 뒤: collect {project.ref} <길이>")
+    return sent
 
 
 # ── board: 스토리보드 대표 이미지 (Flow 이미지 모드) ─────────────────────────────
@@ -635,6 +952,166 @@ def configure_image(page):
     return chip, credit, model
 
 
+# ── board 참고 이미지 (2026-11 경복궁 시험) — cuts.json 컷에 "ref": "refs/layout.png"(편 폴더 기준)
+# 프롬프트 상자 근처의 '이미지 추가' 버튼 → 'Upload media' → 파일 → (처음 한 번 사용자 동의) → 프롬프트에 붙는다.
+# Flow 이미지 모드의 이 버튼은 아직 실측 전이다 — 못 찾으면 프롬프트 상자 주변 버튼 목록·화면을 남기고 그 컷은 보내지 않는다.
+
+_JS_PROMPT_BUTTONS = """
+() => {
+  // 화면 아래쪽(프롬프트 상자 둘레) 버튼만 — 머리글의 add(새 프로젝트 등)와 헷갈리지 않게
+  const vis = e => { const r = e.getBoundingClientRect(); return r.width > 8 && r.height > 8 && r.top > innerHeight * 0.55 && r.bottom < innerHeight + 2; };
+  return [...document.querySelectorAll("button,[role=button]")].filter(vis).map(e => {
+    const r = e.getBoundingClientRect();
+    return { text: (e.innerText || "").replace(/\\s+/g, " ").trim().slice(0, 40), aria: e.getAttribute("aria-label") || "",
+             x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };
+  });
+}
+"""
+_ADD_REF_RX = re.compile(r"^(add|add_2|add_circle|add_photo_alternate|attach_file|image|photo|이미지|Add image|Add media|"
+                         r"이미지 추가|미디어 추가|재료|Ingredients?)$|add.*(image|media|이미지|미디어)|(이미지|미디어).*(추가|업로드)|"
+                         r"ingredient|reference|참조|upload|업로드", re.I)
+
+
+def pick_add_ref_button(btns: list[dict]) -> dict | None:
+    """프롬프트 상자 둘레 버튼에서 '이미지 추가'로 보이는 것 하나 (순수 로직). aria 우선, 그다음 아이콘 글자. 전송(arrow_forward)·설정 칩 제외."""
+    ok = [b for b in btns if not re.search(r"arrow_forward|설정|Settings|crop_|Nano|Video|동영상", (b.get("text", "") + " " + b.get("aria", "")), re.I)]
+    for key in ("aria", "text"):
+        hit = [b for b in ok if b.get(key) and _ADD_REF_RX.search(b[key])]
+        if hit:
+            return sorted(hit, key=lambda b: b.get("x", 0))[0]
+    return None
+
+
+_JS_PROMPT_BOX = """
+() => {
+  // 프롬프트 상자(편집 칸을 품은 큰 상자) 안의 붙은 재료 그림(chip)과 지우기 버튼
+  const ed = document.querySelector('[contenteditable="true"]');
+  if (!ed) return null;
+  let box = ed;
+  for (let i = 0; i < 8 && box.parentElement; i++) {
+    box = box.parentElement;
+    if (box.getBoundingClientRect().width > 450 && box.querySelector('button')) break;
+  }
+  const chips = [...box.querySelectorAll("img")].map(i => i.currentSrc || i.src).filter(Boolean);
+  const clears = [...box.querySelectorAll("button")].filter(b => {
+    const t = (b.innerText || "").trim(), a = b.getAttribute("aria-label") || "";
+    return t === "close" || /remove|clear|delete|삭제|제거|지우기/i.test(a);
+  }).map(b => { const r = b.getBoundingClientRect(); return {x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), aria: b.getAttribute("aria-label") || ""}; });
+  return { chips, clears };
+}
+"""
+
+_JS_PCT = """
+() => [...document.querySelectorAll("div,span,p")].some(e => {
+  const r = e.getBoundingClientRect(); if (r.width < 4 || r.height < 4) return false;
+  return /^\\d{1,3}%$/.test((e.innerText || "").trim()); })
+"""
+
+_JS_PICK_ITEM = """
+([stem, pre]) => {
+  // 고르기 창 안의 항목: 파일 이름으로, 없으면 전에 없던 그림으로
+  const vis = e => { const r = e.getBoundingClientRect(); return r.width > 30 && r.height > 30 && r.top >= 0 && r.top < innerHeight; };
+  let el = [...document.querySelectorAll("button,[role=button],[role=option],li,div")].filter(vis)
+    .filter(e => (e.innerText || "").trim().startsWith(stem) && (e.innerText || "").length < 80)
+    .sort((x, y) => x.getBoundingClientRect().height - y.getBoundingClientRect().height)[0];
+  if (!el) {
+    const seen = new Set(pre);
+    el = [...document.querySelectorAll("[role=dialog] img, dialog img")].filter(vis).find(i => !seen.has(i.currentSrc || i.src));
+  }
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return {x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: (el.innerText || el.alt || "").trim().slice(0, 40)};
+}
+"""
+
+
+def clear_ingredients(page, tag: str) -> None:
+    """프롬프트 상자에 남아 있는 재료 그림을 지운다(이전 컷·이전 실행에서 붙은 것이 다음 컷을 오염시키지 않게)."""
+    for _ in range(4):
+        st = page.evaluate(_JS_PROMPT_BOX)
+        if not st or not st["chips"]:
+            return
+        if not st["clears"]:
+            _log(f"  {tag} 프롬프트 상자에 재료 그림 {len(st['chips'])}장이 남아 있는데 지우기 버튼을 못 찾았다")
+            return
+        b = st["clears"][0]; page.mouse.click(b["x"], b["y"]); page.wait_for_timeout(700)
+    _log(f"  {tag} 남아 있던 재료 그림을 지웠다")
+
+
+def _attach_ref(page, img: Path, tag: str, debug_dir: Path) -> set:
+    """참고 이미지를 프롬프트 상자에 붙이고, 붙은 그림 주소(들)를 돌려준다 — 결과 이미지로 잘못 받지 않게 board 가 제외한다.
+    2026-11 첫 시도: '+'(aria 'Add ingredients to the prompt box') → 올리기는 됐지만 올라가는 중(46%)에 '프롬프트에 추가'를 눌러
+    이미 있던 다른 보드 그림(C02)이 붙었고, 다 올라간 스케치가 결과로 잡혔다 → 다 올라갈 때까지 기다리고, 파일 이름/새 그림으로 고르고, 붙은 그림을 확인한다."""
+    shot = lambda n: page.screenshot(path=str(debug_dir / f"{n}.png"))
+    clear_ingredients(page, tag)
+    pre = [i["src"] for i in page.evaluate(_JS_IMGS)]
+    btns = page.evaluate(_JS_PROMPT_BUTTONS)
+    (debug_dir / f"{tag}_prompt_buttons.json").write_text(json.dumps(btns, ensure_ascii=False, indent=1), encoding="utf-8")
+    hit = pick_add_ref_button(btns)
+    if not hit:
+        shot(f"{tag}_no_add_ref")
+        raise SystemExit(f"{tag} 참고 이미지 넣는 버튼을 못 찾았다 — {debug_dir.name}/{tag}_prompt_buttons.json 을 보고 고친다 (보내지 않았다)")
+    _log(f"  {tag} 참고 이미지 버튼: {hit.get('aria') or hit.get('text')}")
+    chooser = None
+    try:                                                  # 버튼이 곧바로 파일 선택 창을 여는 경우
+        with page.expect_file_chooser(timeout=2500) as fc:
+            page.mouse.click(hit["x"], hit["y"])
+        chooser = fc.value
+    except Exception:
+        page.wait_for_timeout(1200)
+    if chooser is None:                                   # 고르기 창이 뜨고 그 안의 '업로드'를 눌러야 하는 경우
+        shot(f"{tag}_picker_open")
+        up = page.evaluate(_JS_FIND, r"Upload media|Upload image|미디어 업로드|이미지 업로드|^(upload )?(Upload|업로드)$")
+        if not up:
+            (debug_dir / f"{tag}_after_click_buttons.json").write_text(
+                json.dumps(page.evaluate(_JS_PANEL_ITEMS), ensure_ascii=False, indent=1), encoding="utf-8")
+            raise SystemExit(f"{tag} 업로드 버튼을 못 찾았다 — {debug_dir.name}/{tag}_picker_open.png (보내지 않았다)")
+        try:
+            with page.expect_file_chooser(timeout=10_000) as fc:
+                page.mouse.click(up["x"], up["y"])
+            chooser = fc.value
+        except Exception:
+            shot(f"{tag}_no_chooser")
+            raise SystemExit(f"{tag} 파일 선택 창이 안 떴다 — {debug_dir.name}/{tag}_no_chooser.png (보내지 않았다)")
+    chooser.set_files(str(img))
+    page.wait_for_timeout(2500)
+    if page.evaluate(_JS_FIND, r"^I agree$|^동의$"):
+        shot(f"{tag}_rights")
+        print("\n★ Flow 창에 'Rights to use this image' 확인이 떴습니다. 읽고 직접 'I agree'(동의)를 눌러 주세요(3분 기다림).\n", flush=True)
+        for _ in range(90):
+            page.wait_for_timeout(2000)
+            if not page.evaluate(_JS_FIND, r"^I agree$|^동의$"):
+                break
+        else:
+            raise SystemExit("동의 창이 닫히지 않았다 — 보내지 않았다")
+    calm = 0                                              # 다 올라갈 때까지 (화면 어디든 'NN%' 가 두 번 연속 없을 때)
+    for _ in range(120):
+        page.wait_for_timeout(1000)
+        calm = calm + 1 if not page.evaluate(_JS_PCT) else 0
+        if calm >= 2:
+            break
+    shot(f"{tag}_after_upload")
+    st = page.evaluate(_JS_PROMPT_BOX) or {"chips": []}
+    new_chips = [c for c in st["chips"] if c not in pre]
+    if not new_chips and page.evaluate(_JS_FIND, r"^(Add to prompt|프롬프트에 추가)$"):
+        item = page.evaluate(_JS_PICK_ITEM, [img.stem[:16], pre])
+        if item:
+            _log(f"  {tag} 고르기 창에서 선택: {item.get('text') or '새 그림'}")
+            page.mouse.click(item["x"], item["y"]); page.wait_for_timeout(1200)
+        click_text(page, r"^(Add to prompt|프롬프트에 추가)$", "Add to prompt", 2500)
+    if page.evaluate(_JS_FIND, r"^(Add to prompt|프롬프트에 추가)$"):
+        page.keyboard.press("Escape"); page.wait_for_timeout(600)
+    shot(f"{tag}_ref_set")
+    st = page.evaluate(_JS_PROMPT_BOX) or {"chips": []}
+    new_chips = [c for c in st["chips"] if c not in pre]
+    if len(st["chips"]) != 1 or not new_chips:
+        (debug_dir / f"{tag}_ref_state.json").write_text(json.dumps({"pre": pre, "box": st}, ensure_ascii=False, indent=1), encoding="utf-8")
+        raise SystemExit(f"{tag} 프롬프트 상자에 붙은 그림이 방금 올린 참고 이미지가 아니다(붙은 {len(st['chips'])}장, 새 것 {len(new_chips)}장) — "
+                         f"{debug_dir.name}/{tag}_ref_set.png 확인 (보내지 않았다)")
+    _log(f"  {tag} 참고 이미지 ← {img.name} (프롬프트 상자에 붙은 것 확인)")
+    return set(new_chips) | {i["src"] for i in page.evaluate(_JS_IMGS)} - set(pre)
+
+
 def board(project: Project, only: set[int] | None = None, max_credit: int | None = None,
           redo: bool = False, headless: bool = False, wait_sec: int = 180) -> int:
     """컷마다 Flow 이미지 모드로 대표 이미지 한 장 → build/board/C##.<확장자>.
@@ -670,10 +1147,7 @@ def board(project: Project, only: set[int] | None = None, max_credit: int | None
             dismiss_modals(page)
             if not logged_in(page):
                 raise SystemExit("로그인이 안 돼 있다 — 먼저 `login` 을 실행하라")
-            if not click_text(page, TEXT["new_project"], "새 프로젝트", 9000):
-                raise SystemExit("'새 프로젝트' 버튼을 못 찾았다 — guides/flow-ui.md 를 보고 TEXT 를 고쳐라")
-            meta["url"] = page.url
-            _log(f"프로젝트: {page.url}")
+            meta["url"] = open_flow_project(page, project)
             page.keyboard.press("Escape"); page.wait_for_timeout(500)
             if not ensure_direct_mode(page, project.build):
                 raise SystemExit("직접 생성 모드(설정 칩)를 찾지 못했다 — guides/flow-ui.md 의 2026-10 메모를 보라")
@@ -695,7 +1169,15 @@ def board(project: Project, only: set[int] | None = None, max_credit: int | None
             _log(f"[board] {len(targets)}장: " + ", ".join(f"C{c['n']:02d}" for c in targets))
 
             for c in targets:
-                before = [i["src"] for i in page.evaluate(_JS_IMGS)]
+                ref_srcs: set = set()
+                if c.get("ref"):                                 # 참고 이미지를 먼저 붙이고, 그 뒤에 '전송 전' 목록을 잰다
+                    rp = (project.dir / c["ref"]).resolve()
+                    if not rp.exists():
+                        _log(f"  C{c['n']:02d} 참고 이미지가 없다: {c['ref']} — 건너뜀"); continue
+                    ref_srcs = _attach_ref(page, rp, f"C{c['n']:02d}", out)
+                else:
+                    clear_ingredients(page, f"C{c['n']:02d}")
+                before = [i["src"] for i in page.evaluate(_JS_IMGS)] + list(ref_srcs)
                 ed = _editor(page)
                 ed.click(timeout=15_000)
                 page.keyboard.press("Meta+A" if sys.platform == "darwin" else "Control+A")

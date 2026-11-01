@@ -102,6 +102,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1   # Windows
 - **Flow 화면이 바뀌어 `submit` 이 버튼을 못 찾는다** → `guides/flow-ui.md`. `python3 -m flowmaker login` 으로 창을 띄워 화면을 보고, `flow_driver.py` 의 `TEXT` 표(버튼 글자 정규식)만 고친다. 좌표나 CSS 선택자를 박지 마라.
 - **클립에 엉뚱한 것이 나왔다**(나뭇잎·자동차·나체·우두커니 선 사람·부서진 구조물) → `guides/prompting.md` 의 사고 목록에서 같은 유형을 찾아 프롬프트를 고치고, 같은 실수가 규칙으로 안 잡혔다면 **`style.py` 의 `check()` 에 규칙을 한 줄 보탠다.** 편 폴더에만 적으면 다음 편에서 재발한다.
 - **need 가 len 보다 크다** → 그 컷의 `len` 을 한 단계 올린다(6→8). 조립은 부족분을 느리게 재생해 채우는데 1.2배까지는 티가 안 나고 1.7배를 넘으면 거부한다.
+- **보드→영상**: 컷에 `"engine": "frames"` → `frames <편>` 으로 제출, 회수는 `collect`. **참고 이미지**: 컷에 `"ref": "refs/…png"` → board 가 붙인다. (`guides/prompting.md` 7절)
+- **Flow 프로젝트는 편마다 하나** — `project.json` 의 `flow_url` 을 board·submit 이 같이 쓴다(처음에 자동으로 적힘, `guides/flow-ui.md` 2026-11).
 - **`collect` 가 계속 종료코드 2** → 생성이 오래 걸리는 것. 2~3분 뒤 다시. 10분 넘게 그대로면 Flow 화면을 직접 열어 실패한 클립이 있는지 본다.
 - **`collect` 가 "동영상이 제출 수보다 많다"** → 출력 개수 설정이 1이 아니다. login 창에서 '출력 1개'로 맞추고 새로 제출한다(회수 매핑이 틀릴 수 있어 일부러 멈춘다).
 - **ElevenLabs 400/401** → 키가 틀렸거나 크레딧 소진. `.env` 와 https://elevenlabs.io 사용량을 확인하라고 안내.

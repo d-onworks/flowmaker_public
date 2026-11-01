@@ -19,7 +19,8 @@
 
 diag 스타일 (2026-10 추가 — 편 단위 옵션, projects/<편>/project.json 의 "style")
     clay      회색 점토 다이어그램 (기본 · 지금까지의 모든 편)
-    archviz   무채색 실사 건축 CG + 청록 안내선·화살표 (숫자·라벨은 그리지 않는다 — 필요하면 조립에서 덧입힌다)
+    archviz   무채색 실사 건축 CG + 굵은 청록 안내선·화살표 (숫자·라벨은 그리지 않는다 — 필요하면 조립에서 덧입힌다)
+              2026-10-18 안내선을 굵은 네온관 느낌(밝은 심 + 반투명 빛 번짐)으로 바꿨다(사용자 지적: 얇아서 잘 안 보임 · 굵어져도 비쳐 보이게). 이전 꼬리로 쓴 편은 check 가 걸린다 → `style <편> archviz` 로 다시
     flat      아이소메트릭 플랫 일러스트 — 색면과 얇은 윤곽선
     (2026-10 비교 보드 뒤 사용자 결정: 실사 재질(material)은 너무 사실적이라 빼고, X-ray 는 고르지 않았다 — 꼬리 문구는 git 기록에 있다)
     스타일은 프롬프트의 세 군데만 바꾼다: 첫머리(opener) · 강조 문장(accent) · 꼬리(tail).
@@ -51,9 +52,51 @@ DIAG_STYLES: dict[str, dict] = {
         "accent": "Strong colour is used only for {x}; everything else stays in a near-monochrome palette of white, pale concrete and soft grey.",
         "tail": (" Photoreal architectural visualization in a near-monochrome palette of white, pale concrete and soft "
                  "grey, clean modern rendering on a plain light grey studio ground, no sky, no environment. Soft "
-                 "overcast daylight, gentle shadows, everything in crisp focus. Thin glowing cyan guide lines and simple "
-                 "glowing cyan arrows trace the key paths and directions, with no labels on them. Precise technical "
-                 "documentary look, not cinematic. " + _NO_TEXT),
+                 "overcast daylight, gentle shadows, everything in crisp focus. Bold thick glowing cyan neon-tube "
+                 "guide lines and large bold glowing cyan neon arrows, each with a bright core and a soft translucent "
+                 "glow halo, trace the key paths and directions, clearly visible against every surface while the "
+                 "structure still shows faintly through the glow, with no labels on them. Precise technical documentary look, not cinematic. " + _NO_TEXT),
+    },
+    "archviz_clean": {
+        # 2026-11 시험: 레퍼런스 쇼츠(흰색 실사 건축 CG, 안내선 없음) 비교용 — archviz 에서 청록 네온 문장만 뺐다
+        "label": "무채색 실사 건축 CG (안내선 없음 · 시험)",
+        "opener": "Photoreal architectural visualization cutaway",
+        "accent": "Strong colour is used only for {x}; everything else stays in a near-monochrome palette of white, pale concrete and soft grey.",
+        "tail": (" Photoreal architectural visualization in a near-monochrome palette of white, pale concrete and soft "
+                 "grey, clean modern rendering on a plain light grey studio ground, no sky, no environment. Soft "
+                 "overcast daylight, gentle shadows, everything in crisp focus. Precise technical documentary look, "
+                 "not cinematic. " + _NO_TEXT),
+    },
+    "archviz_bright": {
+        # 2026-11 시험 A/B: archviz_clean 이 '무겁다'(사용자) — 레퍼런스처럼 밝은 쇼룸 톤·매끈한 재질·옅은 그림자
+        "label": "밝은 쇼룸 실사 건축 CG (시험)",
+        "opener": "Photoreal architectural visualization cutaway",
+        "accent": "Strong colour is used only for {x}; everything else stays in a bright high-key palette of clean white, light pale concrete and soft warm grey.",
+        "tail": (" Photoreal architectural visualization in a bright high-key palette of clean white, light pale concrete and "
+                 "soft warm grey, smooth clean matte surfaces with fine subtle detail, like a premium architectural showroom "
+                 "model on a seamless bright white studio ground, no sky, no environment. Bright soft diffuse light from above, "
+                 "very soft faint shadows, airy and luminous, everything in crisp sharp focus. Precise technical documentary "
+                 "look, not cinematic. " + _NO_TEXT),
+    },
+    "docu_real": {
+        # 2026-11 시험: 사용자가 가져온 '실사에 가까운 CG 다큐' 채널(툰드라 시추탑) — 실제 환경·재질·흐린 자연광·채도 뺀 색·대기 원근
+        "label": "실사풍 다큐 CG (환경 포함 · 시험)",
+        "opener": "Photoreal documentary CG cutaway",
+        "accent": "Strong colour is used only for {x}; everything else keeps a muted, desaturated natural documentary palette.",
+        "tail": (" Photoreal documentary CG with real weathered materials and textures, set in its real surroundings with the "
+                 "ground and sky visible. Natural overcast daylight, soft diffuse shadows, a muted desaturated cool colour grade, "
+                 "gentle atmospheric haze in the distance, realistic small details that show the scale. Restrained documentary "
+                 "look, not cinematic, no dramatic lighting. " + _NO_TEXT),
+    },
+    "hero_mono": {
+        # 2026-11 시험: 주인공(본문에서 이름 붙인 대상)만 실사, 주변 도시·산·길은 단색 매스 모형 — 신비한 건축사전식 섞기(사용자 요청, 경복궁)
+        "label": "주인공만 실사 + 주변 단색 매스 (시험)",
+        "opener": "Photoreal aerial documentary view",
+        "accent": "Full natural colour and real texture are used only for {x}; everything around it stays plain untextured light grey.",
+        "tail": (" Only the main subject described above is rendered photoreal in full natural colour with real materials and "
+                 "texture. Everything around it, the surrounding city blocks, roads, trees and mountains, is simplified into plain "
+                 "untextured matte light grey massing models with soft ambient occlusion, like an architectural site model. Soft "
+                 "overcast daylight, gentle atmospheric haze, high aerial viewpoint. Precise documentary look, not cinematic. " + _NO_TEXT),
     },
     "flat": {
         "label": "아이소메트릭 플랫 일러스트",
@@ -69,6 +112,10 @@ DEFAULT_STYLE = "clay"
 # 스타일마다 본문에 남으면 안 되는 다른 스타일의 말 (restyle 이 못 바꾼 흔적)
 _STYLE_CLASH = {
     "archviz": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG)\b", re.I),
+    "archviz_clean": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG)\b", re.I),
+    "archviz_bright": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG)\b", re.I),
+    "docu_real": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG|studio)\b", re.I),
+    "hero_mono": re.compile(r"\b(clay|3D CG|studio)\b", re.I),
     "flat": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG|photoreal)\b", re.I),
 }
 

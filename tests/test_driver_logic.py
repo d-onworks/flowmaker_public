@@ -56,3 +56,48 @@ def test_gate_judges_photoreal_share_on_whole_project_not_length_group():
     assert gate_violations(group, whole) == []
     # 편 전체가 상한을 넘으면 여전히 막는다
     assert gate_violations(group, group[:3])
+
+
+# ── 편마다 Flow 프로젝트 하나 (2026-11): collect 는 최신 썸네일부터 프롬프트로 찾고, 받아 간 클립에 닿으면 멈춘다
+from flowmaker.flow_driver import plan_collect, url_key
+
+
+def test_plan_collect_skips_other_groups_and_stops_at_taken():
+    recs = [{"cut": 9}, {"cut": 3}, {"cut": None}, {"cut": 5}, {"cut": 3, "taken": True}, {"cut": 7}]
+    found, stopped = plan_collect([3, 5, 7], recs)
+    assert found == {3: 1, 5: 3} and stopped          # 7 은 taken 아래라 쓰지 않는다
+
+
+def test_plan_collect_regenerated_cut_pending_does_not_take_old_clip():
+    # C06 을 다시 만들었는데 아직 생성 중 — 옛 C06(taken) 을 새 것으로 받으면 안 된다
+    recs = [{"cut": 2}, {"cut": 6, "taken": True}]
+    found, stopped = plan_collect([6], recs)
+    assert found == {} and stopped
+
+
+def test_plan_collect_prefers_newest_duplicate():
+    found, _ = plan_collect([4], [{"cut": 4}, {"cut": 4}])
+    assert found == {4: 0}
+
+
+def test_url_key_drops_query():
+    assert url_key("https://x/video/abc?sig=1&e=2") == url_key("https://x/video/abc?sig=9") == "https://x/video/abc"
+
+
+from flowmaker.flow_driver import pick_title_candidate
+
+
+def test_title_prefers_input_then_default_name():
+    c = [{"text": "Flow", "x": 10}, {"text": "11월 1일 15:16", "x": 80}, {"text": "공유", "x": 600}]
+    assert pick_title_candidate(c)["text"] == "11월 1일 15:16"
+    c2 = c + [{"text": "", "input": True, "x": 90}]
+    assert pick_title_candidate(c2)["input"]
+    assert pick_title_candidate([{"text": "공유", "x": 1}]) is None
+    assert pick_title_candidate([{"text": "온돌 편", "x": 5}], "온돌 편")["text"] == "온돌 편"
+
+
+def test_match_prompts_handles_curly_quotes():
+    from flowmaker.flow_driver import match_prompts
+    pr = {3: "Aerial view looking north along the palace's single straight central axis. " * 3}
+    page = "Prompt " + pr[3].replace("'", "’") + " Edit"
+    assert match_prompts(pr, [page]) == [3]

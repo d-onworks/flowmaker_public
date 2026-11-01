@@ -9,6 +9,7 @@ LENS="${*:-4 6 8 10}"
 PY=.venv/bin/python
 LOG="projects/$P/run.log"
 TMP="projects/$P/build/.last_submit.txt"
+mkdir -p "projects/$P/build"          # 새 편은 build/ 가 아직 없다 (2026-11 zero15_a 에서 tee·grep 오류)
 {
   echo "===== run_flow $P [$LENS] $(date '+%F %T') ====="
   sub=()

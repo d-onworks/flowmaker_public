@@ -6,6 +6,9 @@ projects/<이름>/
     subtitles.txt       자막 문구 — script.txt와 줄 수가 같고, 숫자는 아라비아 숫자("1854년")
     cuts.json           컷 계획 — 아래 스키마
     project.json        편 설정 (선택) — {"style": "clay"|"archviz"|"flat"} diag 그림 스타일, 없으면 clay.
+                        "flow_url": 이 편의 Flow 프로젝트 주소 — 처음 board/submit 때 자동으로 적힌다. 편마다 Flow 프로젝트 하나.
+                        "title": 편 주제 제목 — Flow 프로젝트 이름이 된다(`new --title` · `title <편> "<제목>"`).
+                        "flow_titled": Flow 에서 이름 바꾸기가 확인된 제목 (자동).
                         `new <이름> --style archviz` 로 만들거나 `style <이름> archviz` 로 바꾼다 (flowmaker/style.py DIAG_STYLES)
     facts.md            사실 검증 기록 (출처·쓰면 안 되는 것)
     sfx.json            효과음 계획 (선택)
@@ -105,6 +108,26 @@ class Project:
 
     def set_style(self, name: str) -> None:
         d = self.config(); d["style"] = name
+        self.config_path.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+    def set_config(self, key: str, value) -> None:
+        d = self.config(); d[key] = value
+        self.config_path.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+    @property
+    def title(self) -> str:
+        """이 편의 주제 제목 (project.json "title", 없으면 폴더 이름) — Flow 프로젝트 이름으로 쓴다."""
+        t = self.config().get("title")
+        return t.strip() if isinstance(t, str) and t.strip() else self.name
+
+    @property
+    def flow_url(self) -> str | None:
+        """이 편의 Flow 프로젝트 주소 (project.json "flow_url"). 편마다 하나를 board·submit 이 같이 쓴다(2026-11 사용자 결정)."""
+        u = self.config().get("flow_url")
+        return u if isinstance(u, str) and u.startswith("http") else None
+
+    def set_flow_url(self, url: str) -> None:
+        d = self.config(); d["flow_url"] = url
         self.config_path.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     @property
     def sfx_path(self) -> Path: return self.dir / "sfx.json"
@@ -227,6 +250,12 @@ def validate_cuts(cuts, n_sentences: int | None = None) -> list[str]:
                 bad.append(f"{tag}: lead 는 {{\"cut\": 다른 컷 번호, \"from\": 0 이상 초, \"dur\": 양수 초}} 여야 한다")
             elif _num(c.get("need")) and ld["dur"] >= c["need"] - 0.3:
                 bad.append(f"{tag}: lead dur {ld['dur']}s 가 need {c['need']}s 를 거의 다 먹는다 — 이 컷 자신의 그림이 남지 않는다")
+        if "graphic" in c:
+            g = c["graphic"]
+            ok = (isinstance(g, dict) and isinstance(g.get("src"), str) and g["src"].strip()
+                  and _num(g.get("at", 0)) and g.get("at", 0) >= 0)
+            if not ok:
+                bad.append(f"{tag}: graphic 은 {{\"src\": \"graphics/C##.mov\" (투명 배경 그래픽), \"at\": 컷 안 시작 초(생략 0)}} 여야 한다")
     if n_sentences is not None and next_sentence - 1 != n_sentences:
         bad.append(f"컷이 덮는 문장은 {next_sentence-1}개인데 대본은 {n_sentences}줄이다 — 빠지거나 넘친 문장이 있다")
     return bad

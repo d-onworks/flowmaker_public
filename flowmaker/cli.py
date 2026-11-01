@@ -6,6 +6,8 @@
     doctor                      환경 점검 (깔지는 않는다 — 부족하면 `setup`)
     login                       Flow 로그인 (한 번) — 같은 창에서 생성 설정(동영상·9:16·출력 1개)을 맞춰 둔다
     new <이름> [--from moai] [--style clay]   프로젝트 폴더 만들기 (예시 복사 가능 · diag 그림 스타일 선택)
+    frames <프로젝트> [--only N]  "engine": "frames" 컷을 보드 이미지에서 시작하는 영상으로 제출 (회수는 collect)
+    title <프로젝트> [제목]       편 주제 제목 (Flow 프로젝트 이름) 보기/바꾸기
     style <프로젝트> [스타일]     diag 그림 스타일 보기/바꾸기 — clay · archviz · flat (크레딧은 같다)
     check <프로젝트>             cuts.json 형식 + 그림체 정본 검사 (크레딧 0)
     tts <프로젝트>               원샷 더빙
@@ -75,6 +77,9 @@ def cmd_new(a):
         if a.from_example and a.style != p.style:
             raise SystemExit(f"예시는 {p.style} 스타일로 쓰여 있다 — 복사한 뒤 `style {a.project} {a.style}` 로 바꿔라")
         p.set_style(a.style)
+    if a.title:
+        Project(a.project).set_config("title", a.title)
+        print(f"제목: {a.title}  (Flow 프로젝트 이름으로 쓴다)")
     print(f"diag 그림 스타일: {Project(a.project).style} — {style.DIAG_STYLES[Project(a.project).style]['label']}"
           f"  (diag 꼬리는 style.diag_tail('{Project(a.project).style}'), 강조는 style.accent(대상, '{Project(a.project).style}'))")
 
@@ -187,6 +192,8 @@ def main(argv=None) -> None:
     sub.add_parser("login")
     s = sub.add_parser("new"); s.add_argument("project"); s.add_argument("--from", dest="from_example")
     s.add_argument("--style", choices=tuple(style.DIAG_STYLES), help="diag 그림 스타일 (기본 clay)")
+    s.add_argument("--title", help="편 주제 제목 — Flow 프로젝트 이름이 된다")
+    s = sub.add_parser("title"); s.add_argument("project"); s.add_argument("text", nargs="?")
     s = sub.add_parser("style"); s.add_argument("project"); s.add_argument("name", nargs="?")
     s.add_argument("--force", action="store_true", help="클립이 이미 있어도 바꾼다")
     for name in ("check", "status", "tts", "sync-need", "review", "subs", "sfx", "assemble"):
@@ -207,6 +214,8 @@ def main(argv=None) -> None:
         s.add_argument("--headless", action="store_true")
         if name == "submit":
             s.add_argument("--only", help="컷 번호, 쉼표 구분 (예: 3,7)")
+    s = sub.add_parser("frames"); s.add_argument("project"); s.add_argument("--only", help="컷 번호, 쉼표 구분")
+    s.add_argument("--headless", action="store_true")
     s = sub.add_parser("board"); s.add_argument("project")
     s.add_argument("--only", help="컷 번호, 쉼표 구분 (예: 3,7)")
     s.add_argument("--max-credit", type=int, default=None, help="이미지 1장당 허용 크레딧 상한 (기본: 0일 때만 진행)")
@@ -224,6 +233,13 @@ def main(argv=None) -> None:
         from . import flow_driver; flow_driver.login(); return
     if a.cmd == "new":
         cmd_new(a); return
+    if a.cmd == "title":
+        p = Project(a.project).must_exist()
+        if a.text:
+            p.set_config("title", a.text)
+        print(f"제목: {p.title}" + (f"  · Flow 이름 확인됨" if p.config().get("flow_titled") == p.title
+                                     else "  · 다음 board/submit 때 Flow 프로젝트 이름을 바꾼다"))
+        return
     if a.cmd == "style":
         cmd_style(a); return
     if a.cmd == "check":
@@ -242,6 +258,10 @@ def main(argv=None) -> None:
         from . import flow_driver
         only = {int(x) for x in a.only.split(",")} if a.only else None
         flow_driver.submit(p, a.len, only, headless=a.headless)
+    elif a.cmd == "frames":
+        from . import flow_driver
+        only = {int(x) for x in a.only.split(",")} if a.only else None
+        flow_driver.frames(p, only, headless=a.headless)
     elif a.cmd == "board":
         from . import flow_driver
         only = {int(x) for x in a.only.split(",")} if a.only else None
