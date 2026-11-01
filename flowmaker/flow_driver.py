@@ -757,10 +757,12 @@ def collect(project: Project, length: int, headless: bool = False) -> int:
 # 이 편의 Flow 프로젝트 하나에 보내고 build/submit_<len>s.json 에 적어 두므로 회수는 그냥 `collect <편> <len>`.
 # 보드의 AI 마크는 build/board_clean/C##.jpg (VM 에서 지운 판)가 있으면 그것을 쓴다 — 영상에 별이 두 개 생기지 않게.
 
-def _set_start_frame(page, img: Path, tag: str, shot) -> None:
-    slot_rx = r"^(Start|시작)$"
-    if not click_text(page, slot_rx, f"{tag} 시작 칸", 2000):
-        shot(f"{tag}_no_slot"); raise SystemExit(f"{tag} 시작(Start) 칸을 못 찾았다 — 보내지 않았다")
+def _set_start_frame(page, img: Path, tag: str, shot, slot: str = "start") -> None:
+    """프레임 칸(Start/End)에 그림을 넣는다. slot="end" 는 마지막 장면 — 2026-11 경복궁 하강 비행(전경 → 근정전 정면)."""
+    slot_rx = r"^(Start|시작)$" if slot == "start" else r"^(End|끝|종료)$"
+    label = "시작(Start)" if slot == "start" else "끝(End)"
+    if not click_text(page, slot_rx, f"{tag} {label} 칸", 2000):
+        shot(f"{tag}_no_{slot}_slot"); raise SystemExit(f"{tag} {label} 칸을 못 찾았다 — 보내지 않았다 (크레딧 0)")
     hit = page.evaluate(_JS_FIND, r"Upload media|미디어 업로드")
     if not hit:
         shot(f"{tag}_no_dialog"); raise SystemExit("'Select a frame image' 창이 안 떴다 — 보내지 않았다")
@@ -801,7 +803,7 @@ def _set_start_frame(page, img: Path, tag: str, shot) -> None:
     if not filled:
         shot(f"{tag}_not_filled"); raise SystemExit(f"{tag} 시작 칸에 그림이 안 들어갔다 — 보내지 않았다")
     shot(f"{tag}_set")
-    _log(f"  {tag} 시작 프레임 ← {img.name}")
+    _log(f"  {tag} {label} 프레임 ← {img.name}")
 
 
 def frames(project: Project, only: set[int] | None = None, headless: bool = False) -> int:
@@ -811,7 +813,14 @@ def frames(project: Project, only: set[int] | None = None, headless: bool = Fals
     if not targets:
         _log("[frames] 제출할 컷 없음 (cuts.json 에 \"engine\": \"frames\" 인 미생성 컷)"); return 0
     board = project.build / "board"
+    def frame_spec(c: dict, key: str) -> Path | None:          # cuts.json "frames": {"start": "경로", "end": "경로"} (편 폴더 기준)
+        v = (c.get("frames") or {}).get(key)
+        return (project.dir / v).resolve() if v else None
+
     def start_img(n: int) -> Path | None:
+        c = next((x for x in cuts if x["n"] == n), {})
+        if frame_spec(c, "start"):
+            return frame_spec(c, "start") if frame_spec(c, "start").exists() else None
         for d in (project.build / "board_clean", board):
             hit = sorted(d.glob(f"C{n:02d}.*")) if d.exists() else []
             if hit:
@@ -854,6 +863,12 @@ def frames(project: Project, only: set[int] | None = None, headless: bool = Fals
                 src = start_img(c["n"])
                 tmp = dbg / f"{tag}_start_{time.strftime('%H%M%S')}{src.suffix}"; shutil.copyfile(src, tmp)
                 _set_start_frame(page, tmp, tag, shot)
+                end = frame_spec(c, "end")
+                if end:
+                    if not end.exists():
+                        raise SystemExit(f"{tag} 끝 장면 그림이 없다: {end} — 보내지 않았다")
+                    tmp2 = dbg / f"{tag}_end_{time.strftime('%H%M%S')}{end.suffix}"; shutil.copyfile(end, tmp2)
+                    _set_start_frame(page, tmp2, tag, shot, slot="end")
                 ed = _editor(page); ed.click(timeout=15_000)
                 page.keyboard.press("Meta+A" if sys.platform == "darwin" else "Control+A"); page.keyboard.press("Delete")
                 page.keyboard.type(c["prompt"], delay=0); page.wait_for_timeout(900)
@@ -1020,7 +1035,9 @@ _JS_PICK_ITEM = """
   }
   if (!el) return null;
   const r = el.getBoundingClientRect();
-  return {x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: (el.innerText || el.alt || "").trim().slice(0, 40)};
+  const im = el.tagName === "IMG" ? el : el.querySelector("img");
+  return {x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: (el.innerText || el.alt || "").trim().slice(0, 40),
+          src: im ? (im.currentSrc || im.src) : ""};
 }
 """
 
@@ -1059,8 +1076,16 @@ def _attach_ref(page, img: Path, tag: str, debug_dir: Path) -> set:
         chooser = fc.value
     except Exception:
         page.wait_for_timeout(1200)
-    if chooser is None:                                   # 고르기 창이 뜨고 그 안의 '업로드'를 눌러야 하는 경우
+    reused = None
+    if chooser is None:                                   # 고르기 창이 떴다 — 이 프로젝트에 이미 올린 같은 파일이 있으면 그걸 고른다(2026-11 경복궁 C04)
         shot(f"{tag}_picker_open")
+        item = page.evaluate(_JS_PICK_ITEM, [img.stem[:16], []])
+        if item and item.get("text", "").startswith(img.stem[:16]):
+            _log(f"  {tag} 이미 올린 '{item['text']}' 를 고름 (다시 올리지 않음)")
+            page.mouse.click(item["x"], item["y"]); page.wait_for_timeout(1200)
+            click_text(page, r"^(Add to prompt|프롬프트에 추가)$", "Add to prompt", 2500)
+            reused = item
+    if chooser is None and reused is None:                # 없으면 '업로드'
         up = page.evaluate(_JS_FIND, r"Upload media|Upload image|미디어 업로드|이미지 업로드|^(upload )?(Upload|업로드)$")
         if not up:
             (debug_dir / f"{tag}_after_click_buttons.json").write_text(
@@ -1073,7 +1098,8 @@ def _attach_ref(page, img: Path, tag: str, debug_dir: Path) -> set:
         except Exception:
             shot(f"{tag}_no_chooser")
             raise SystemExit(f"{tag} 파일 선택 창이 안 떴다 — {debug_dir.name}/{tag}_no_chooser.png (보내지 않았다)")
-    chooser.set_files(str(img))
+    if chooser is not None:
+        chooser.set_files(str(img))
     page.wait_for_timeout(2500)
     if page.evaluate(_JS_FIND, r"^I agree$|^동의$"):
         shot(f"{tag}_rights")
@@ -1104,6 +1130,8 @@ def _attach_ref(page, img: Path, tag: str, debug_dir: Path) -> set:
     shot(f"{tag}_ref_set")
     st = page.evaluate(_JS_PROMPT_BOX) or {"chips": []}
     new_chips = [c for c in st["chips"] if c not in pre]
+    if reused and len(st["chips"]) == 1 and not new_chips:
+        new_chips = list(st["chips"])                     # 이미 있던 그림을 골랐으니 '새 그림'이 아닐 수 있다 — 한 장만 붙었으면 통과
     if len(st["chips"]) != 1 or not new_chips:
         (debug_dir / f"{tag}_ref_state.json").write_text(json.dumps({"pre": pre, "box": st}, ensure_ascii=False, indent=1), encoding="utf-8")
         raise SystemExit(f"{tag} 프롬프트 상자에 붙은 그림이 방금 올린 참고 이미지가 아니다(붙은 {len(st['chips'])}장, 새 것 {len(new_chips)}장) — "

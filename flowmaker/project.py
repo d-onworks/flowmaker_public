@@ -35,6 +35,10 @@ cuts.json 항목 (필수 / 선택)
     abstract   선택  true — 상징·비유 컷(사용자에게 그리는 방식을 물어 정한 것). must 대신 쓴다
     unmark     선택  false — AI 마크 지우기를 건너뛴다(확인된 보드 이미지로 만든 클립처럼 마크가 없을 때)
     made       선택  클립을 Flow 영상이 아닌 다른 방법으로 만들었을 때 그 방법 메모 (예: "board+pipe_fill")
+    engine     선택  "frames" — 보드를 첫 장면으로 영상을 만든다(`frames <편>`). 없으면 글→영상(submit)
+    ref        선택  "refs/layout.png" — board 가 프롬프트 상자에 붙이는 참고 이미지(배치 스케치·잘라낸 전경·사용자 사진)
+    zoom_from  선택  {"cut": 3, "target": [x, y], "to": 3.2} — 앞 컷 전경 보드에서 이 컷(클로즈업)으로 빠른 줌인 전환.
+                    tools/zoom_cut.py --split 으로 두 컷 클립을 같이 만든다 (guides/prompting.md 8절)
     done       계산  클립 파일이 있는가 — 파일에 저장하지 않는다
 
 프로젝트 지정
