@@ -200,3 +200,9 @@ Flow 텍스트→영상은 보드 이미지를 시작 프레임으로 쓰지 않
 - 뒤 컷은 끝 장면 보드(C04)로 바로 이어 붙인다(board_pan 으로 천천히 다가감) — 이음매가 보이지 않는다.
 - 프롬프트: "one continuous drone flight … dives down quickly along the central axis … arrives low in front … buildings stay exactly where they are; only the camera moves."
 - zoom_cut 은 **같은 각도**에서 가까이 가는 전환(지도 → 한 지점, 단면 → 부품 확대)에만 쓴다.
+
+**8-2. 같은 수준 장면끼리 넘어갈 때 — 조립 단계의 빠른 전환 (`"trans"`, 크레딧 0)**
+- 레퍼런스(@Zeronodong) 실측: 약 5~6초마다 장면이 바뀌고, 넘어가는 0.5~1초에 카메라가 휙 움직인다(휙 패닝·빠르게 빠지기·기울며 휙). 장면 안은 느리게, 경계만 빠르게.
+- 컷에 `"trans": "whip_left"` 등 — 이 컷 끝 0.25초가 그 방향으로 가속하며 흐려지고, 다음 컷 처음 0.25초가 반대쪽에서 감속하며 들어온다. 자막·그래픽은 그대로(클립만 움직임). 길이 변화 없음.
+- 고르는 법: 전체 → 부분(같은 각도) `zoom_in` · 부분 → 전체 `zoom_out` · 같은 수준(장소 → 장소, 사례 → 사례) `whip_left/right` · 위아래로 이어지는 공간(지상 → 지하) `whip_down`. 시점이 바뀌는 전체 → 부분은 8-1(Flow 시작·끝 장면). 천천히 넘길 이유가 있으면 `cut`.
+- ffmpeg 만 쓴다(tblend 두 번으로 움직임 흐림). tmix·gblur 는 overlay 와 같이 쓰면 창이 열리는 순간 '툭' 번져서 뺐다.

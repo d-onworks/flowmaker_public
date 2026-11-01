@@ -39,6 +39,8 @@ cuts.json 항목 (필수 / 선택)
     ref        선택  "refs/layout.png" — board 가 프롬프트 상자에 붙이는 참고 이미지(배치 스케치·잘라낸 전경·사용자 사진)
     zoom_from  선택  {"cut": 3, "target": [x, y], "to": 3.2} — 앞 컷 전경 보드에서 이 컷(클로즈업)으로 빠른 줌인 전환.
                     tools/zoom_cut.py --split 으로 두 컷 클립을 같이 만든다 (guides/prompting.md 8절)
+    trans      선택  이 컷 → 다음 컷 전환: "cut"(기본) | "zoom_in" | "zoom_out" | "whip_left" | "whip_right" | "whip_up" | "whip_down"
+                    — 조립 때 경계 앞뒤 0.25초씩 클립만 움직인다(flowmaker/transitions.py, guides/prompting.md 8-2절)
     done       계산  클립 파일이 있는가 — 파일에 저장하지 않는다
 
 프로젝트 지정
@@ -238,6 +240,10 @@ def validate_cuts(cuts, n_sentences: int | None = None) -> list[str]:
             bad.append(f"{tag}: offset 은 0 이상 숫자여야 한다")
         if "until" in c and not (_num(c["until"]) and c["until"] > (c.get("offset") if _num(c.get("offset")) else 0)):
             bad.append(f"{tag}: until 은 offset 보다 큰 숫자여야 한다")
+        if "trans" in c:
+            from .transitions import KINDS as _TK
+            if c["trans"] not in _TK:
+                bad.append(f"{tag}: trans 는 {', '.join(_TK)} 중 하나")
         if "must" in c and not (isinstance(c["must"], list) and c["must"]
                                 and all(isinstance(m, str) and m.strip() for m in c["must"])):
             bad.append(f"{tag}: must 는 비어 있지 않은 문장 목록이어야 한다")

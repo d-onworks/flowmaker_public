@@ -128,6 +128,14 @@ def run(project: Project, keep_mark: bool = False) -> float:
                  mask if c.get("unmark", True) else None, c["n"])     # unmark:false — 보드로 만든 클립(마크 없음)
         parts.append(out)
         c["_parts"] = parts[first_part:]
+    # 1-1) 컷 경계의 빠른 전환 (cuts.json "trans") — 길이는 그대로, 클립만 움직인다 (flowmaker/transitions.py)
+    from . import transitions
+    for a_, b_ in zip(cuts, cuts[1:]):
+        kind = a_.get("trans", "cut")
+        if kind and kind != "cut":
+            done_a = transitions.apply(a_["_parts"][-1], kind, "tail")
+            done_b = transitions.apply(b_["_parts"][0], kind, "head")
+            print(f"  C{a_['n']:02d}→C{b_['n']:02d} 전환 {kind}" + ("" if done_a and done_b else " (토막이 짧아 일부 건너뜀)"))
     t = 0.0                                           # need 합이 아니라 인코딩된 실제 길이로 센다(프레임 반올림이 쌓인다)
     for c in cuts:
         d = sum(duration(p) for p in c.pop("_parts"))
