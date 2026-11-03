@@ -550,9 +550,7 @@ def submit(project: Project, length: int, only: set[int] | None = None, headless
 
             for c in targets:
                 ed = _editor(page)
-                ed.click(timeout=15_000)
-                page.keyboard.press("Meta+A" if sys.platform == "darwin" else "Control+A")
-                page.keyboard.press("Delete")
+                _clear_editor(page, ed)
                 page.wait_for_timeout(300)
                 page.keyboard.type(c["prompt"], delay=0)
                 page.wait_for_timeout(900)
@@ -605,15 +603,49 @@ _JS_DETAIL = """
 """
 
 
+# 2026-11 GV90 편: 격자가 화면에 보이는 만큼만 그린다(보드 이미지가 많아 클립 13개만 보이고 오래된 C01~C09 를 못 찾음).
+# 마지막 썸네일을 화면 아래로 끌어 내리고 스크롤 가능한 조상까지 내려서 더 불러온다.
+_JS_SCROLL_MORE = """
+(pattern) => {
+  const rx = new RegExp(pattern);
+  const ims = [...document.querySelectorAll("img")].filter(i => rx.test(i.alt || ""));
+  const all = [...document.querySelectorAll("img")];
+  const last = all[all.length - 1] || ims[ims.length - 1];
+  if (last) last.scrollIntoView({block: "end"});
+  let el = last ? last.parentElement : null;
+  while (el) { const s = getComputedStyle(el); if (/(auto|scroll)/.test(s.overflowY) && el.scrollHeight > el.clientHeight) { el.scrollBy(0, el.clientHeight * 0.9); break; } el = el.parentElement; }
+  window.scrollBy(0, window.innerHeight * 0.9);
+  return ims.length;
+}
+"""
+
+
 def _thumbs(page, want: int = 0, timeout_ms: int = 12_000) -> list[dict]:
-    """결과 격자의 썸네일 위치(화면 순서). want 개가 보일 때까지 조금 기다린다."""
+    """결과 격자의 썸네일 위치(화면 순서). want 개가 보일 때까지 기다리고, 모자라면 아래로 스크롤해 더 불러온다."""
     waited, th = 0, []
     while waited <= timeout_ms:
         th = page.evaluate(_JS_THUMBS, TEXT["thumb_alt"])
         if want and len(th) >= want:
             break
+        if want:
+            page.evaluate(_JS_SCROLL_MORE, TEXT["thumb_alt"])
         page.wait_for_timeout(1000); waited += 1000
     return th
+
+
+def _thumbs_all(page, max_steps: int = 40) -> list[dict]:
+    """격자를 끝까지 스크롤해 보이는 동영상 썸네일 수가 더 늘지 않을 때까지 불러온 뒤 맨 위로 돌아간다."""
+    n_prev, still = -1, 0
+    for _ in range(max_steps):
+        n = page.evaluate(_JS_SCROLL_MORE, TEXT["thumb_alt"])
+        page.wait_for_timeout(900)
+        still = still + 1 if n == n_prev else 0
+        if still >= 3:
+            break
+        n_prev = n
+    page.evaluate("() => { window.scrollTo(0, 0); document.querySelectorAll('*').forEach(e => { if (e.scrollTop) e.scrollTop = 0; }); }")
+    page.wait_for_timeout(800)
+    return page.evaluate(_JS_THUMBS, TEXT["thumb_alt"])
 
 
 def url_key(u: str | None) -> str:
@@ -631,14 +663,16 @@ def plan_collect(order: list[int], recs: list[dict]) -> tuple[dict[int, int], bo
     want, found = set(order), {}
     for k, r in enumerate(recs):
         if r.get("taken"):
-            return found, True
+            # 2026-11 GV90 편: frames 는 길이가 섞인 한 묶음으로 제출해 격자에서 4·6·8초가 뒤섞인다 —
+            # 4초를 먼저 받으면 맨 위가 '받아 간 클립'이라 6·8초 회수가 바로 멈췄다. 받아 간 것은 건너뛰고 계속 본다.
+            continue
         n = r.get("cut")
         if n in want and n not in found:
             found[n] = k
     return found, False
 
 
-def collect(project: Project, length: int, headless: bool = False) -> int:
+def collect(project: Project, length: int, headless: bool = False, partial: bool = False) -> int:
     """썸네일을 최신순으로 하나씩 열어 상세 화면의 <video> 주소와 프롬프트를 읽고, 프롬프트로 컷을 찾아 내려받는다.
 
     편마다 Flow 프로젝트 하나라 격자에 다른 길이 그룹·예전 클립·버린 클립이 섞여 있다(2026-11).
@@ -671,8 +705,9 @@ def collect(project: Project, length: int, headless: bool = False) -> int:
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=90_000)
             page.wait_for_timeout(9000)
-            th = _thumbs(page, 1)
-            _log(f"[{length}s] 프로젝트의 완성 클립 썸네일 {len(th)}개 · 이번에 찾을 컷 {order}")
+            _thumbs(page, 1)
+            th = _thumbs_all(page)
+            _log(f"[{length}s] 프로젝트의 완성 클립 썸네일 {len(th)}개(끝까지 스크롤) · 이번에 찾을 컷 {order}")
             recs: list[dict] = []
             for k in range(len(th)):
                 key = url_key(th[k].get("src"))           # 썸네일 주소가 없으면 기억하지 않는다(위치는 바뀌므로)
@@ -728,9 +763,11 @@ def collect(project: Project, length: int, headless: bool = False) -> int:
 
             found, _ = plan_collect(order, recs)
             missing = [n for n in order if n not in found]
-            if missing:
-                _log(f"  아직 안 보이는 컷 {missing} — 생성 중이면 잠시 뒤 다시")
+            if missing and not partial:
+                _log(f"  아직 안 보이는 컷 {missing} — 생성 중이면 잠시 뒤 다시 (찾은 것만 받으려면 --partial)")
                 sys.exit(EXIT_NOT_READY)
+            if missing:
+                _log(f"  ★격자에 없는 컷 {missing} — 찾은 {len(found)}개만 받는다(--partial). 없는 컷은 Flow 화면에서 실패 여부를 확인할 것")
 
             for n, k in found.items():
                 rec = recs[k]
@@ -756,6 +793,17 @@ def collect(project: Project, length: int, headless: bool = False) -> int:
 # cuts.json 의 컷에 "engine": "frames" 를 적으면 submit(글→영상)은 건너뛰고 이 명령이 맡는다. 크레딧은 글→영상과 같다.
 # 이 편의 Flow 프로젝트 하나에 보내고 build/submit_<len>s.json 에 적어 두므로 회수는 그냥 `collect <편> <len>`.
 # 보드의 AI 마크는 build/board_clean/C##.jpg (VM 에서 지운 판)가 있으면 그것을 쓴다 — 영상에 별이 두 개 생기지 않게.
+
+
+def _clear_editor(page, ed) -> None:
+    """프롬프트 칸만 비운다 (2026-11 GV90 편 사고 의심: 클릭이 칸을 못 잡은 채 Cmd+A·Delete 를 누르면
+    Flow 격자의 미디어가 전부 선택·삭제(휴지통)될 수 있다). 포커스가 편집 칸이 아니면 키를 누르지 않고 멈춘다."""
+    ed.click(timeout=15_000)
+    ok = page.evaluate("() => { const a = document.activeElement; return !!(a && (a.isContentEditable || a.closest('[contenteditable=\"true\"]'))); }")
+    if not ok:
+        raise SystemExit("프롬프트 칸에 포커스가 없다 — 전체 선택·삭제 키를 누르지 않고 멈췄다(보내지 않았다)")
+    ed.press("Meta+A" if sys.platform == "darwin" else "Control+A")
+    ed.press("Delete")
 
 def _set_start_frame(page, img: Path, tag: str, shot, slot: str = "start") -> None:
     """프레임 칸(Start/End)에 그림을 넣는다. slot="end" 는 마지막 장면 — 2026-11 경복궁 하강 비행(전경 → 근정전 정면)."""
@@ -869,8 +917,7 @@ def frames(project: Project, only: set[int] | None = None, headless: bool = Fals
                         raise SystemExit(f"{tag} 끝 장면 그림이 없다: {end} — 보내지 않았다")
                     tmp2 = dbg / f"{tag}_end_{time.strftime('%H%M%S')}{end.suffix}"; shutil.copyfile(end, tmp2)
                     _set_start_frame(page, tmp2, tag, shot, slot="end")
-                ed = _editor(page); ed.click(timeout=15_000)
-                page.keyboard.press("Meta+A" if sys.platform == "darwin" else "Control+A"); page.keyboard.press("Delete")
+                ed = _editor(page); _clear_editor(page, ed)
                 page.keyboard.type(c["prompt"], delay=0); page.wait_for_timeout(900)
                 if len("".join(ed.inner_text().split())) < len("".join(c["prompt"].split())) * 0.95:
                     raise SystemExit(f"{tag} 프롬프트 입력이 잘렸다 — 보내지 않았다")
@@ -942,8 +989,31 @@ def _ext_of(content_type: str, data: bytes) -> str:
     return "jpg"
 
 
-def configure_image(page):
-    """설정 칩을 열어 '이미지 · 9:16 · x1' 로 맞추고 (칩, 장당 크레딧, 모델)을 돌려준다. 어긋나면 SystemExit."""
+def _board_suspect(f: Path, ref: Path | None) -> tuple[str, str] | None:
+    """받은 보드가 진짜 결과인지 확인 (2026-11 GV90 편 사고): 286px 썸네일을 받아 옴 · 참고 이미지를 거의 그대로 돌려줌."""
+    try:
+        from PIL import Image, ImageChops, ImageStat   # 맥 .venv 에는 numpy 가 없다 — PIL 만
+    except Exception:
+        return None
+    im = Image.open(f)
+    if max(im.size) < 1000:
+        return ("small", f"해상도가 {im.size[0]}×{im.size[1]} 뿐(썸네일을 받은 것 같다)")
+    if ref and ref.exists():
+        r = Image.open(ref).convert("L")
+        if abs(r.size[0] / r.size[1] - im.size[0] / im.size[1]) < 0.05:
+            d = ImageChops.difference(im.convert("L").resize((192, 344)), r.resize((192, 344)))
+            if ImageStat.Stat(d).mean[0] < 12:
+                return ("refcopy", "참고 이미지와 거의 같다(참고 이미지를 받았거나 모델이 그대로 베낌)")
+    return None
+
+
+# 보드 이미지 모델 (2026-11 GV90 편): 기본은 0크레딧 Nano Banana 2.1 — 창에 무엇이 골라져 있든 매번 맞춘다.
+# 'pro' 는 공학·복잡한 구조용 시험. 장당 크레딧은 아래 안전장치(--max-credit)가 지킨다.
+IMAGE_MODELS = {"2.1": r"Nano Banana 2\.1", "pro": r"Nano Banana Pro"}
+
+
+def configure_image(page, image_model: str = "2.1"):
+    """설정 칩을 열어 '이미지 · 9:16 · x1 · 모델' 로 맞추고 (칩, 장당 크레딧, 모델)을 돌려준다. 어긋나면 SystemExit."""
     hit = find_settings(page)
     if not hit:
         raise SystemExit("설정 칩을 못 찾았다 — 보내지 않았다")
@@ -951,8 +1021,18 @@ def configure_image(page):
     click_text(page, TEXT["image_mode"], "이미지 모드", 1500)
     click_text(page, TEXT["portrait"], "세로 9:16", 700)
     click_text(page, TEXT["count1"], "출력 1개", 900)
+    want = IMAGE_MODELS[image_model]
+    m = page.evaluate(_JS_FIND_ARIA, TEXT["model_aria"])
+    if m and not re.search(want, m["text"]):
+        _log(f"  이미지 모델 {m['text']} → {want.replace(chr(92), '')} 로 바꾼다")
+        page.mouse.click(m["x"], m["y"]); page.wait_for_timeout(1200)
+        click_text(page, r"^\W*" + want + r"\b", want.replace(chr(92), ''), 1500)
+        page.wait_for_timeout(800)
     m = page.evaluate(_JS_FIND_ARIA, TEXT["model_aria"])
     model = m["text"] if m else "?"
+    if not re.search(want, model):
+        page.keyboard.press("Escape")
+        raise SystemExit(f"이미지 모델을 {want.replace(chr(92), '')} 로 못 바꿨다 (지금: {model}) — 보내지 않았다")
     credit = page.evaluate(_JS_CREDIT, TEXT["credit"])
     page.keyboard.press("Escape"); page.wait_for_timeout(700)
     now = find_settings(page)
@@ -1141,7 +1221,7 @@ def _attach_ref(page, img: Path, tag: str, debug_dir: Path) -> set:
 
 
 def board(project: Project, only: set[int] | None = None, max_credit: int | None = None,
-          redo: bool = False, headless: bool = False, wait_sec: int = 180) -> int:
+          redo: bool = False, headless: bool = False, wait_sec: int = 180, image_model: str = "2.1") -> int:
     """컷마다 Flow 이미지 모드로 대표 이미지 한 장 → build/board/C##.<확장자>.
 
     크레딧 안전장치: 설정 패널의 '생성 시 N 크레딧'을 읽어
@@ -1181,7 +1261,7 @@ def board(project: Project, only: set[int] | None = None, max_credit: int | None
                 raise SystemExit("직접 생성 모드(설정 칩)를 찾지 못했다 — guides/flow-ui.md 의 2026-10 메모를 보라")
 
             # 설정 패널을 연 채로 화면을 남겨 둔다 (크레딧·모델 확인용)
-            chip, credit, model = configure_image(page)
+            chip, credit, model = configure_image(page, image_model)
             hit = find_settings(page)
             if hit:
                 page.mouse.click(hit["x"], hit["y"]); page.wait_for_timeout(1000)
@@ -1207,9 +1287,7 @@ def board(project: Project, only: set[int] | None = None, max_credit: int | None
                     clear_ingredients(page, f"C{c['n']:02d}")
                 before = [i["src"] for i in page.evaluate(_JS_IMGS)] + list(ref_srcs)
                 ed = _editor(page)
-                ed.click(timeout=15_000)
-                page.keyboard.press("Meta+A" if sys.platform == "darwin" else "Control+A")
-                page.keyboard.press("Delete")
+                _clear_editor(page, ed)
                 page.wait_for_timeout(300)
                 page.keyboard.type(c["prompt"], delay=0)
                 page.wait_for_timeout(900)
@@ -1254,6 +1332,13 @@ def board(project: Project, only: set[int] | None = None, max_credit: int | None
                 meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
                 got.append(c["n"])
                 _log(f"  C{c['n']:02d} ← {f.name} ({pick['nw']}×{pick['nh']})")
+                # 'change only …' 판(같은 시점에서 문 상태만 바꾼 시작·끝 장면)은 원래 참고 이미지와 비슷하다 → 베낌 검사는 빼고 크기만 본다
+                same_view = "change only what is described here" in c["prompt"]
+                bad = _board_suspect(f, None if same_view or not c.get("ref") else project.dir / c["ref"])
+                if bad:
+                    sus = f.with_name(f"C{c['n']:02d}_suspect_{bad[0]}{f.suffix}")
+                    f.rename(sus); got.remove(c["n"])
+                    _log(f"  ★C{c['n']:02d} 결과가 의심스럽다 — {bad[1]} → {sus.name} 로 치웠다 (다시 뽑을 것)")
         finally:
             meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
             ctx.close()

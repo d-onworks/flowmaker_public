@@ -62,17 +62,18 @@ def test_gate_judges_photoreal_share_on_whole_project_not_length_group():
 from flowmaker.flow_driver import plan_collect, url_key
 
 
-def test_plan_collect_skips_other_groups_and_stops_at_taken():
+def test_plan_collect_skips_other_groups_and_taken():
+    # 2026-11: frames 는 길이가 섞여 제출된다 — 받아 간 클립은 건너뛰고 계속 본다(멈추지 않는다)
     recs = [{"cut": 9}, {"cut": 3}, {"cut": None}, {"cut": 5}, {"cut": 3, "taken": True}, {"cut": 7}]
     found, stopped = plan_collect([3, 5, 7], recs)
-    assert found == {3: 1, 5: 3} and stopped          # 7 은 taken 아래라 쓰지 않는다
+    assert found == {3: 1, 5: 3, 7: 5} and not stopped
 
 
 def test_plan_collect_regenerated_cut_pending_does_not_take_old_clip():
     # C06 을 다시 만들었는데 아직 생성 중 — 옛 C06(taken) 을 새 것으로 받으면 안 된다
     recs = [{"cut": 2}, {"cut": 6, "taken": True}]
     found, stopped = plan_collect([6], recs)
-    assert found == {} and stopped
+    assert found == {}                                # 받아 간 옛 C06 은 고르지 않는다
 
 
 def test_plan_collect_prefers_newest_duplicate():

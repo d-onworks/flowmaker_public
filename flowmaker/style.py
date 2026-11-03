@@ -98,6 +98,17 @@ DIAG_STYLES: dict[str, dict] = {
                  "untextured matte light grey massing models with soft ambient occlusion, like an architectural site model. Soft "
                  "overcast daylight, gentle atmospheric haze, high aerial viewpoint. Precise documentary look, not cinematic. " + _NO_TEXT),
     },
+    "hero_focus": {
+        # 2026-11 GV90 편(사용자): hero_mono 가 '차만 딱 두드러져' 좋다 — 하지만 hero_mono 꼬리의 'high aerial viewpoint'·도시 블록은
+        # 실험실·클로즈업·투시 컷에 안 맞는다 → 시점·주변을 열어 둔 판. 주인공만 실사, 방·장비·건물·땅은 단색 매스.
+        "label": "주인공만 실사 + 주변 단색 매스 (시점 자유 · 시험)",
+        "opener": "Photoreal documentary view",
+        "accent": "Full natural colour and real texture are used only for {x}; everything around it stays plain untextured light grey.",
+        "tail": (" Only the main subject described above is rendered photoreal in full natural colour with real materials and "
+                 "texture. Everything around it, the surrounding room, equipment, buildings, ground and background, is simplified into "
+                 "plain untextured matte light grey massing models with soft ambient occlusion, like an architectural site model. Soft "
+                 "overcast daylight, gentle atmospheric haze. Precise documentary look, not cinematic. " + _NO_TEXT),
+    },
     "flat": {
         "label": "아이소메트릭 플랫 일러스트",
         "opener": "Flat isometric illustration cutaway",
@@ -116,6 +127,7 @@ _STYLE_CLASH = {
     "archviz_bright": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG)\b", re.I),
     "docu_real": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG|studio)\b", re.I),
     "hero_mono": re.compile(r"\b(clay|3D CG|studio)\b", re.I),
+    "hero_focus": re.compile(r"\b(clay|3D CG|studio)\b", re.I),
     "flat": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG|photoreal)\b", re.I),
 }
 

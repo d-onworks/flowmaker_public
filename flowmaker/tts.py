@@ -23,7 +23,8 @@ DEFAULT_VOICE = "JBFqnCBsd6RMkjVDRZzb"     # ElevenLabs 기본 제공 목소리 
 
 def synthesize(project: Project) -> dict:
     key = env.require("ELEVENLABS_API_KEY", "https://elevenlabs.io 에서 발급(무료 플랜도 API 키가 나온다)")
-    voice = env.get("ELEVENLABS_VOICE_ID", DEFAULT_VOICE)
+    # 편마다 목소리를 바꿀 수 있다 (2026-11 GV90 편): project.json "voice_id" > .env ELEVENLABS_VOICE_ID > 기본
+    voice = project.config().get("voice_id") or env.get("ELEVENLABS_VOICE_ID", DEFAULT_VOICE)
     model = env.get("TTS_MODEL", "eleven_v3")
     lines = project.lines(project.script)
     flat = " ".join(lines)                      # 개행 대신 공백 — 한 테이크 유지

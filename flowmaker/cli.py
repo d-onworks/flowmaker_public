@@ -13,7 +13,7 @@
     tts <프로젝트>               원샷 더빙
     timing <프로젝트> --target 100   배속 + 자막 타임코드   (또는 --tempo 1.2)
     sync-need <프로젝트>         컷 길이(need)를 나레이션에 맞춤
-    board <프로젝트>             스토리보드 — 컷마다 Flow 이미지 모드로 대표 이미지 1장 [--only 3,7] [--max-credit N] [--redo]
+    board <프로젝트>             스토리보드 — 컷마다 Flow 이미지 모드로 대표 이미지 1장 [--only 3,7] [--max-credit N] [--redo] [--image-model 2.1|pro]
     storyboard <프로젝트>        board 이미지를 컷 정보와 묶어 storyboard.html 로 [--redo 5,17 = 다시 뽑는 중 표시]
     submit <프로젝트> <len>      Flow 제출 (len = 4|6|8|10) [--only 3,7]   종료코드 3 = 일부만 전송
     collect <프로젝트> <len>     생성된 클립 회수   종료코드 2 = 아직 생성 중
@@ -242,9 +242,12 @@ def main(argv=None) -> None:
         s.add_argument("--headless", action="store_true")
         if name == "submit":
             s.add_argument("--only", help="컷 번호, 쉼표 구분 (예: 3,7)")
+        else:
+            s.add_argument("--partial", action="store_true", help="격자에 보이는 컷만 받는다(나머지는 실패·생성 중 확인 후 다시 제출)")
     s = sub.add_parser("frames"); s.add_argument("project"); s.add_argument("--only", help="컷 번호, 쉼표 구분")
     s.add_argument("--headless", action="store_true")
     s = sub.add_parser("board"); s.add_argument("project")
+    s.add_argument("--image-model", choices=("2.1", "pro"), default="2.1", help="보드 이미지 모델 (기본 0크레딧 2.1 · pro 는 크레딧 확인 후 --max-credit N)")
     s.add_argument("--only", help="컷 번호, 쉼표 구분 (예: 3,7)")
     s.add_argument("--max-credit", type=int, default=None, help="이미지 1장당 허용 크레딧 상한 (기본: 0일 때만 진행)")
     s.add_argument("--redo", action="store_true", help="이미 있는 컷도 다시 뽑는다")
@@ -293,10 +296,10 @@ def main(argv=None) -> None:
     elif a.cmd == "board":
         from . import flow_driver
         only = {int(x) for x in a.only.split(",")} if a.only else None
-        flow_driver.board(p, only, max_credit=a.max_credit, redo=a.redo, headless=a.headless)
+        flow_driver.board(p, only, max_credit=a.max_credit, redo=a.redo, headless=a.headless, image_model=a.image_model)
     elif a.cmd == "collect":
         from . import flow_driver
-        flow_driver.collect(p, a.len, headless=a.headless)
+        flow_driver.collect(p, a.len, headless=a.headless, partial=getattr(a, "partial", False))
     elif a.cmd == "review":
         from . import review; review.run(p)
     elif a.cmd == "subs":
