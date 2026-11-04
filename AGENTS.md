@@ -52,17 +52,32 @@ powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1   # Windows
 
 ```
 0  doctor → (❌ 있으면) setup        환경. 어떤 작업이든 여기서 시작한다
-1  new <p> [--from moai]         프로젝트 폴더
+1  new <p> [--from moai] [--style clay]   프로젝트 폴더 · diag 그림 스타일(clay·archviz·flat, 크레딧 같음 — guides/prompting.md 1-1절)
+                                  쓰던 편은 style <p> <스타일> (클립이 생기기 전에만)
 2  facts.md · script.txt · subtitles.txt      ← 에이전트가 쓴다 (guides/format.md, research.md)
+                                  ★script.txt(숫자 한글 풀이·공백 포함) 750자 안팎이 v3 원본 ≈125초(실측 ≈6자/초)
 3  tts <p>                       원샷 더빙 → narration_raw.mp3 + alignment.json
 4  timing <p> --target 100       배속 + 자막 카드.  ★배속이 1.3을 넘으면 대본을 줄이고 3부터 다시
 5  cuts.json                     ← 에이전트가 쓴다 (guides/prompting.md).  문장 번호 매핑이 빠짐없이
 6  sync-need <p>                 컷 길이(need)를 나레이션에 맞춤.  need 가 len 을 넘으면 len 을 한 단계 올린다(권장) — 1.7배는 조립이 거부하는 절대 한계
 7  check <p>                     형식 + 그림체 정본 10개 검사.  ★통과 전에는 절대 제출하지 않는다
-8  submit <p> 8 / collect <p> 8  길이 그룹(4·6·8·10)마다 제출 → 몇 분 뒤 회수.  submit 종료코드 3 = 일부만 전송(안내대로 --only 재제출) · collect 종료코드 2 = 아직 생성 중
-9  review <p>                    프레임 시트.  ★판정은 build/review/C##.png 원본을 열어서 한다
-10 (문제 컷만) submit <p> <len> --only 3,7   → collect
-11 subs <p> → sfx <p> → assemble <p>        → final.mp4
+7b board <p> → storyboard <p>   컷마다 Flow 이미지 모드 대표 이미지(2026-10 실측 0크레딧) → storyboard.html.
+                                  원본으로 검수해 프롬프트를 고치고 board --only N --redo.  ★사용자가 보드를 본 뒤에만 크레딧 승인을 받는다
+8  bash run_flow.sh <p> [len…]  길이 그룹(4·6·8·10)마다 submit → 90초 간격 collect 를 한 번에 (run.log 에 남는다).
+                                  낱개로는 submit <p> 8 / collect <p> 8.  submit 종료코드 3 = 일부만 전송 · collect 종료코드 2 = 아직 생성 중
+   ★사실 컷은 cuts.json 에 "must" (구조·고증 명세), 상징 컷은 "abstract": true — guides/prompting.md 5-1절. 보드·검수 때 한 줄씩 대조
+9  review <p>                    프레임 시트 + strip_C##.png(시작·중간·끝) + motion_C##.png(완성본에 들어가는 구간 전체, 0.6초 간격)
+                                  ★motion 시트를 컷마다 전부 본다 — 되살아남·깜빡임·순간이동·장면 바뀜은 3장으로는 안 보인다.
+                                  출력에 컷마다 영상 안 시각(예: 1:17.8~1:26.5)이 나온다.  ★손·글자 판정은 원본을 열어서 한다
+10 (문제 컷만) 클립을 build/rejected/C##_v1.mp4 로 옮기고(mv -n) 프롬프트 수정 → bash run_flow.sh <p> <len>
+                                  ※submit 은 클립이 이미 있는 컷을 건너뛴다 — 옮기지 않으면 --only 를 줘도 "제출할 컷 없음"
+   클립 뒷부분만 틀렸으면 재생성 대신 cuts.json 의 그 컷에 "until": <초> — 그 지점까지만 써서 늘린다(최대 1.7배, 크레딧 0)
+   Flow 영상이 보드의 구조(관 경로·층수·모양)를 계속 어기면 확인된 보드로 클립을 직접 만든다 — tools/pipe_fill.py · tools/board_pan.py,
+   cuts.json "unmark": false · "made" 메모 (guides/prompting.md 5-2절, 크레딧 0)
+11 subs <p> → sfx <p> → assemble <p>        → final.mp4   (AI 마크 지움 · 미리보기는 unmark <p>)
+12 업로드 패키지 — 제목 3안·설명란·고정 댓글·썸네일 프레임 후보 (guides/format.md 끝 절, facts.md 와 대조)
+13 공개 3~7일 뒤 — 시청 지속 그래프·시청함/스와이프 비율로 이탈 구간을 찾아 guides 에 한 줄
+   첫 2초 미리보기: cuts.json 첫 컷에 "lead": {"cut": N, "from": 초, "dur": 초} (guides/format.md 1절)
 ```
 
 생성 전에 사용자에게 **크레딧 예상(`check` 가 보여준다)** 을 알리고 진행한다.
@@ -79,12 +94,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1   # Windows
 - **사실은 지어내지 않는다.** 수치·연도·인명은 1차 자료로 확인하고 `facts.md` 에 출처를 남긴다. 확인 못 한 건 대본에서 뺀다.
 - **로그인·결제는 사용자가 한다.** 에이전트는 창을 띄우고 기다린다.
 - **AI 생성물임을 숨기지 않는다.** 설명글·고지에 "AI로 만든 3D 애니메이션" 한 줄을 넣도록 안내한다.
+  Flow 화면 오른쪽 아래의 별 모양 AI 마크는 `assemble` 이 지운다(사용자 결정, 2026-10 · `flowmaker/unmark.py`).
+  그래서 설명란 한 줄과 유튜브 「AI 사용(변경되거나 합성된 콘텐츠)」 고지는 **반드시** 켜도록 안내한다. 보이지 않는 SynthID 는 남는다.
 
 ## 상황별 대처
 
 - **Flow 화면이 바뀌어 `submit` 이 버튼을 못 찾는다** → `guides/flow-ui.md`. `python3 -m flowmaker login` 으로 창을 띄워 화면을 보고, `flow_driver.py` 의 `TEXT` 표(버튼 글자 정규식)만 고친다. 좌표나 CSS 선택자를 박지 마라.
 - **클립에 엉뚱한 것이 나왔다**(나뭇잎·자동차·나체·우두커니 선 사람·부서진 구조물) → `guides/prompting.md` 의 사고 목록에서 같은 유형을 찾아 프롬프트를 고치고, 같은 실수가 규칙으로 안 잡혔다면 **`style.py` 의 `check()` 에 규칙을 한 줄 보탠다.** 편 폴더에만 적으면 다음 편에서 재발한다.
 - **need 가 len 보다 크다** → 그 컷의 `len` 을 한 단계 올린다(6→8). 조립은 부족분을 느리게 재생해 채우는데 1.2배까지는 티가 안 나고 1.7배를 넘으면 거부한다.
+- **보드→영상**: 컷에 `"engine": "frames"` → `frames <편>` 으로 제출, 회수는 `collect`. **참고 이미지**: 컷에 `"ref": "refs/…png"` → board 가 붙인다. (`guides/prompting.md` 7절)
+- **Flow 프로젝트는 편마다 하나** — `project.json` 의 `flow_url` 을 board·submit 이 같이 쓴다(처음에 자동으로 적힘, `guides/flow-ui.md` 2026-11).
 - **`collect` 가 계속 종료코드 2** → 생성이 오래 걸리는 것. 2~3분 뒤 다시. 10분 넘게 그대로면 Flow 화면을 직접 열어 실패한 클립이 있는지 본다.
 - **`collect` 가 "동영상이 제출 수보다 많다"** → 출력 개수 설정이 1이 아니다. login 창에서 '출력 1개'로 맞추고 새로 제출한다(회수 매핑이 틀릴 수 있어 일부러 멈춘다).
 - **ElevenLabs 400/401** → 키가 틀렸거나 크레딧 소진. `.env` 와 https://elevenlabs.io 사용량을 확인하라고 안내.

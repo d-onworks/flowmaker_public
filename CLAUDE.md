@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## 사용자가 "설치해줘" 라고 하면 — 되묻지 말고 이 한 줄
 
 ```bash
@@ -29,3 +31,14 @@ git clone https://github.com/d-onworks/flowmaker_public.git && cd flowmaker_publ
 - 지식: `guides/` — format(골격) · prompting(프롬프트 규칙) · research(소재·사실검증) · topics(소재 씨앗) · flow-ui(화면 수리)
 - 예시: `examples/moai` · `examples/icehouse` · `examples/drawbridge`
 - 사용자 작업물: `projects/<이름>/` (git 에 올라가지 않는다)
+
+## 코드를 고쳤으면 — 테스트
+
+```bash
+.venv/bin/python -m pip install -r requirements-dev.txt   # pytest (처음 한 번)
+.venv/bin/python -m pytest tests                          # 전체
+.venv/bin/python -m pytest tests/test_style.py -k test_01 # 하나만
+```
+
+윈도우는 `.venv\Scripts\python.exe -m pytest tests`. `style.check()` 에 규칙을 보탰으면
+`tests/test_style.py` 에 그 규칙이 걸리는 케이스와 깨끗한 컷이 통과하는 케이스를 함께 넣는다.

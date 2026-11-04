@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+import re
 import os
 import subprocess
 
@@ -24,6 +25,9 @@ from .project import Project
 
 TEMPO_WARN = 1.30      # 이보다 크면 음이 올라간다 — 대본을 줄이라고 경고
 TEMPO_MAX = 1.50       # 이보다 크면 거부
+
+
+TAG_RE = re.compile(r"\[[^\]]*\]\s*")   # eleven_v3 감정 태그 — script.txt 줄 맨 앞에만 둔다
 
 
 def build(project: Project, target: float | None = None, tempo: float | None = None) -> dict:
@@ -56,11 +60,12 @@ def build(project: Project, target: float | None = None, tempo: float | None = N
     # 문장 경계 = 정렬값 ÷ 배속
     rows, pos = [], 0
     for i, ln in enumerate(lines, 1):
-        idx = flat.index(ln, pos)
-        a, b = st[idx] / tempo, en[idx + len(ln) - 1] / tempo
+        core = TAG_RE.sub("", ln).strip()             # 줄 앞 v3 감정 태그([excited] 등)는 소리가 아니다 — 문장 시각에서 뺀다
+        idx = flat.index(core, pos)
+        a, b = st[idx] / tempo, en[idx + len(core) - 1] / tempo
         rows.append({"i": i, "sentence": i, "start": round(a, 3), "end": round(b, 3),
-                     "dur": round(b - a, 3), "text": ln})
-        pos = idx + len(ln)
+                     "dur": round(b - a, 3), "text": core})
+        pos = idx + len(core)
 
     # 자막 문구 교체 (아라비아 숫자판)
     if project.subtitles.exists():
@@ -85,6 +90,11 @@ def _measurer():
     return f, d
 
 
+# 자막 카드 한 장의 최대 줄 수. 2026-11 사용자 원칙: 자막은 한 줄(44px 기준 12자 안팎).
+# 긴 문장은 쉼표·띄어쓰기에서 자동으로 나누고, subtitles.txt 의 " / " 가 있으면 그 자리가 우선이다.
+MAX_LINES = 1
+
+
 def n_lines(text: str, f=None, d=None) -> int:
     if f is None:
         f, d = _measurer()
@@ -103,9 +113,13 @@ def split_point(t: str) -> int | None:
     ok = lambda i: 0.30 * n <= i <= 0.70 * n
     def good(i):
         left, right = t[:i].rstrip(), t[i:].lstrip()
-        if not left or not right or right[0].isdigit():
+        if not left or not right:
             return False
         lw = left.split()[-1]
+        if re.search(r"\d[\d,.]*(여|약|만|천|백)?$", lw):     # "150여 | 년" 처럼 숫자와 단위를 가르지 않는다
+            return False
+        if right[0].isdigit() and not left.endswith(","):   # 숫자 앞은 쉼표 뒤에서만 자른다
+            return False
         return not (len(lw) == 1 and lw in "이그저한두세네온각매그의")
     commas = [i + 1 for i, c in enumerate(t)
               if c == "," and not (t[i-1:i].isdigit() and t[i+1:i+2].isdigit())]
@@ -122,11 +136,12 @@ def _split_cards(rows: list[dict]) -> list[dict]:
     f, d = _measurer()
     cards = []
     for r in rows:
-        parts = [r["text"]]
-        for _ in range(2):                          # 최대 2회 분할 → 최대 4장
+        # subtitles.txt 에 " / " 를 넣으면 그 자리에서 카드를 나눈다(직접 지정이 자동 분할보다 우선)
+        parts = [p.strip() for p in r["text"].split(" / ")] if " / " in r["text"] else [r["text"]]
+        for _ in range(3):                          # 최대 3회 분할 → 최대 8장
             out = []
             for t in parts:
-                if n_lines(t, f, d) <= 2:
+                if n_lines(t, f, d) <= MAX_LINES:
                     out.append(t); continue
                 k = split_point(t)
                 out += [t[:k].strip(), t[k:].strip()] if k else [t]
@@ -143,9 +158,12 @@ def _split_cards(rows: list[dict]) -> list[dict]:
                           "dur": round(b - a, 3), "text": p})
     for i, c in enumerate(cards, 1):
         c["i"] = i
-    bad = [c["text"] for c in cards if n_lines(c["text"], f, d) > 2]
+    short = [f'{c["text"]}({c["dur"]:.2f}초)' for c in cards if c.get("dur") is not None and c["dur"] < 0.7]
+    if short:
+        print("※ 0.7초보다 짧게 스치는 자막 카드 — subtitles.txt 에 ' / ' 로 나눌 자리를 직접 정하면 고르게 된다:", ", ".join(short))
+    bad = [c["text"] for c in cards if n_lines(c["text"], f, d) > MAX_LINES]
     if bad:
-        raise SystemExit(f"아직 3줄인 자막이 있다 — 문장을 짧게 고쳐라: {bad}")
+        raise SystemExit(f"아직 {MAX_LINES}줄을 넘는 자막이 있다 — subtitles.txt 에 ' / ' 로 나누거나 문장을 짧게 고쳐라: {bad}")
     return cards
 
 

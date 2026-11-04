@@ -7,7 +7,7 @@
     규칙은 여기 한 곳에만 두고, 사고가 날 때마다 check()에 한 줄씩 보탠다.
 
 그림체 3종
-    diag  회색 점토 다이어그램 — 원리 설명. 화면의 70~85%를 차지한다.
+    diag  원리 설명 도해 — 화면의 70~85%를 차지한다. 그림 스타일은 편마다 고른다(아래 DIAG_STYLES, 기본 clay).
     hist  시대 재현 실사     — 이야기 비트에만 (감정 전달).
     real  현대 현장 실사     — 훅과 엔딩 북엔드에만.
 
@@ -16,6 +16,16 @@
     조항 없는 편 = 9/9컷 사람 없음, 조항 넣은 편 = 12/12컷 우두커니 선 마네킹.
     → 기본 꼬리에는 사람 언급이 없다. 사람이 필요한 컷만 본문에서 mannequin(동작)으로 부른다.
     → 사람은 ①나레이션의 동작을 실연하거나 ②크기 대비가 정보일 때만. 우두커니 서 있는 사람 금지.
+
+diag 스타일 (2026-10 추가 — 편 단위 옵션, projects/<편>/project.json 의 "style")
+    clay      회색 점토 다이어그램 (기본 · 지금까지의 모든 편)
+    archviz   무채색 실사 건축 CG + 굵은 청록 안내선·화살표 (숫자·라벨은 그리지 않는다 — 필요하면 조립에서 덧입힌다)
+              2026-10-18 안내선을 굵은 네온관 느낌(밝은 심 + 반투명 빛 번짐)으로 바꿨다(사용자 지적: 얇아서 잘 안 보임 · 굵어져도 비쳐 보이게). 이전 꼬리로 쓴 편은 check 가 걸린다 → `style <편> archviz` 로 다시
+    flat      아이소메트릭 플랫 일러스트 — 색면과 얇은 윤곽선
+    (2026-10 비교 보드 뒤 사용자 결정: 실사 재질(material)은 너무 사실적이라 빼고, X-ray 는 고르지 않았다 — 꼬리 문구는 git 기록에 있다)
+    스타일은 프롬프트의 세 군데만 바꾼다: 첫머리(opener) · 강조 문장(accent) · 꼬리(tail).
+    Flow 크레딧은 모델·길이·해상도로 정해지고 프롬프트와는 무관하다 — 스타일을 바꿔도 크레딧은 같다.
+    본문은 스타일과 무관하게 내용(구조·경로·개수)만 쓰고, 강조는 accent(대상, 스타일)로 붙인다.
 """
 from __future__ import annotations
 
@@ -23,12 +33,138 @@ import re
 
 # ── 꼬리 문장 ─────────────────────────────────────────────────────────────
 
-def diag_tail() -> str:
-    """회색 점토 다이어그램. 사람 언급 없음(조건문 = 소환 주문)."""
-    return (" Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no "
-            "environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no "
-            "harsh shadows. Flat precise technical documentary infographic look, not photorealistic, "
-            "not cinematic. No numbers, no lettering, no text, no captions, no watermark, no UI, no logo.")
+_NO_TEXT = "No numbers, no lettering, no text, no captions, no watermark, no UI, no logo."
+
+# 꼬리·첫머리·강조 문장 — 사람 언급 없음(조건문 = 소환 주문). 숫자를 쓰지 않는다.
+DIAG_STYLES: dict[str, dict] = {
+    "clay": {
+        "label": "회색 점토 다이어그램",
+        "opener": "Clean 3D CG cutaway diagram",
+        "accent": "Everything except {x} is matte grey.",
+        "tail": (" Untextured matte grey clay models on a neutral mid-grey studio background, no sky, no "
+                 "environment. Soft neutral studio lighting from upper left, gentle ambient occlusion, no "
+                 "harsh shadows. Flat precise technical documentary infographic look, not photorealistic, "
+                 "not cinematic. " + _NO_TEXT),
+    },
+    "archviz": {
+        "label": "무채색 실사 건축 CG + 청록 안내선",
+        "opener": "Photoreal architectural visualization cutaway",
+        "accent": "Strong colour is used only for {x}; everything else stays in a near-monochrome palette of white, pale concrete and soft grey.",
+        "tail": (" Photoreal architectural visualization in a near-monochrome palette of white, pale concrete and soft "
+                 "grey, clean modern rendering on a plain light grey studio ground, no sky, no environment. Soft "
+                 "overcast daylight, gentle shadows, everything in crisp focus. Bold thick glowing cyan neon-tube "
+                 "guide lines and large bold glowing cyan neon arrows, each with a bright core and a soft translucent "
+                 "glow halo, trace the key paths and directions, clearly visible against every surface while the "
+                 "structure still shows faintly through the glow, with no labels on them. Precise technical documentary look, not cinematic. " + _NO_TEXT),
+    },
+    "archviz_clean": {
+        # 2026-11 시험: 레퍼런스 쇼츠(흰색 실사 건축 CG, 안내선 없음) 비교용 — archviz 에서 청록 네온 문장만 뺐다
+        "label": "무채색 실사 건축 CG (안내선 없음 · 시험)",
+        "opener": "Photoreal architectural visualization cutaway",
+        "accent": "Strong colour is used only for {x}; everything else stays in a near-monochrome palette of white, pale concrete and soft grey.",
+        "tail": (" Photoreal architectural visualization in a near-monochrome palette of white, pale concrete and soft "
+                 "grey, clean modern rendering on a plain light grey studio ground, no sky, no environment. Soft "
+                 "overcast daylight, gentle shadows, everything in crisp focus. Precise technical documentary look, "
+                 "not cinematic. " + _NO_TEXT),
+    },
+    "archviz_bright": {
+        # 2026-11 시험 A/B: archviz_clean 이 '무겁다'(사용자) — 레퍼런스처럼 밝은 쇼룸 톤·매끈한 재질·옅은 그림자
+        "label": "밝은 쇼룸 실사 건축 CG (시험)",
+        "opener": "Photoreal architectural visualization cutaway",
+        "accent": "Strong colour is used only for {x}; everything else stays in a bright high-key palette of clean white, light pale concrete and soft warm grey.",
+        "tail": (" Photoreal architectural visualization in a bright high-key palette of clean white, light pale concrete and "
+                 "soft warm grey, smooth clean matte surfaces with fine subtle detail, like a premium architectural showroom "
+                 "model on a seamless bright white studio ground, no sky, no environment. Bright soft diffuse light from above, "
+                 "very soft faint shadows, airy and luminous, everything in crisp sharp focus. Precise technical documentary "
+                 "look, not cinematic. " + _NO_TEXT),
+    },
+    "docu_real": {
+        # 2026-11 시험: 사용자가 가져온 '실사에 가까운 CG 다큐' 채널(툰드라 시추탑) — 실제 환경·재질·흐린 자연광·채도 뺀 색·대기 원근
+        "label": "실사풍 다큐 CG (환경 포함 · 시험)",
+        "opener": "Photoreal documentary CG cutaway",
+        "accent": "Strong colour is used only for {x}; everything else keeps a muted, desaturated natural documentary palette.",
+        "tail": (" Photoreal documentary CG with real weathered materials and textures, set in its real surroundings with the "
+                 "ground and sky visible. Natural overcast daylight, soft diffuse shadows, a muted desaturated cool colour grade, "
+                 "gentle atmospheric haze in the distance, realistic small details that show the scale. Restrained documentary "
+                 "look, not cinematic, no dramatic lighting. " + _NO_TEXT),
+    },
+    "hero_mono": {
+        # 2026-11 시험: 주인공(본문에서 이름 붙인 대상)만 실사, 주변 도시·산·길은 단색 매스 모형 — 신비한 건축사전식 섞기(사용자 요청, 경복궁)
+        "label": "주인공만 실사 + 주변 단색 매스 (시험)",
+        "opener": "Photoreal aerial documentary view",
+        "accent": "Full natural colour and real texture are used only for {x}; everything around it stays plain untextured light grey.",
+        "tail": (" Only the main subject described above is rendered photoreal in full natural colour with real materials and "
+                 "texture. Everything around it, the surrounding city blocks, roads, trees and mountains, is simplified into plain "
+                 "untextured matte light grey massing models with soft ambient occlusion, like an architectural site model. Soft "
+                 "overcast daylight, gentle atmospheric haze, high aerial viewpoint. Precise documentary look, not cinematic. " + _NO_TEXT),
+    },
+    "hero_focus": {
+        # 2026-11 GV90 편(사용자): hero_mono 가 '차만 딱 두드러져' 좋다 — 하지만 hero_mono 꼬리의 'high aerial viewpoint'·도시 블록은
+        # 실험실·클로즈업·투시 컷에 안 맞는다 → 시점·주변을 열어 둔 판. 주인공만 실사, 방·장비·건물·땅은 단색 매스.
+        "label": "주인공만 실사 + 주변 단색 매스 (시점 자유 · 시험)",
+        "opener": "Photoreal documentary view",
+        "accent": "Full natural colour and real texture are used only for {x}; everything around it stays plain untextured light grey.",
+        "tail": (" Only the main subject described above is rendered photoreal in full natural colour with real materials and "
+                 "texture. Everything around it, the surrounding room, equipment, buildings, ground and background, is simplified into "
+                 "plain untextured matte light grey massing models with soft ambient occlusion, like an architectural site model. Soft "
+                 "overcast daylight, gentle atmospheric haze. Precise documentary look, not cinematic. " + _NO_TEXT),
+    },
+    "flat": {
+        "label": "아이소메트릭 플랫 일러스트",
+        "opener": "Flat isometric illustration cutaway",
+        "accent": "Strong accent colour is used only for {x}; everything else uses the calm muted fills.",
+        "tail": (" Clean flat vector illustration in an isometric infographic style, with crisp simple shapes, "
+                 "flat colour fills in a calm muted palette of warm grey, sand and soft slate blue, thin even "
+                 "outlines and simple flat shading, on a plain light grey background, no sky, no environment. "
+                 "Precise technical infographic look, not photorealistic, not cinematic. " + _NO_TEXT),
+    },
+}
+DEFAULT_STYLE = "clay"
+# 스타일마다 본문에 남으면 안 되는 다른 스타일의 말 (restyle 이 못 바꾼 흔적)
+_STYLE_CLASH = {
+    "archviz": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG)\b", re.I),
+    "archviz_clean": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG)\b", re.I),
+    "archviz_bright": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG)\b", re.I),
+    "docu_real": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG|studio)\b", re.I),
+    "hero_mono": re.compile(r"\b(clay|3D CG|studio)\b", re.I),
+    "hero_focus": re.compile(r"\b(clay|3D CG|studio)\b", re.I),
+    "flat": re.compile(r"\b(clay|matte grey(?! mannequin)|3D CG|photoreal)\b", re.I),
+}
+
+
+def _style(name: str) -> dict:
+    if name not in DIAG_STYLES:
+        raise ValueError(f"diag 스타일이 없다: {name} (있는 것: {', '.join(DIAG_STYLES)})")
+    return DIAG_STYLES[name]
+
+
+def diag_tail(style: str = DEFAULT_STYLE) -> str:
+    """diag 꼬리. 기본은 회색 점토."""
+    return _style(style)["tail"]
+
+
+def diag_opener(style: str = DEFAULT_STYLE) -> str:
+    """diag 본문 첫머리 (예: 'Clean 3D CG cutaway diagram')."""
+    return _style(style)["opener"]
+
+
+def accent(things: str, style: str = DEFAULT_STYLE) -> str:
+    """강조 문장 — 색을 쓸 대상만 고른다. 예: accent("the flame and the warm water", "archviz")."""
+    return _style(style)["accent"].format(x=things.strip())
+
+
+def restyle_prompt(prompt: str, src: str, dst: str) -> str:
+    """diag 프롬프트의 첫머리·강조 문장·꼬리를 src 스타일에서 dst 스타일로 바꾼다. 꼬리가 다르면 ValueError."""
+    a, b = _style(src), _style(dst)
+    body = prompt.rstrip()
+    if not body.endswith(a["tail"].strip()):
+        raise ValueError(f"꼬리가 {src} 정본과 다르다 — 먼저 check 를 통과시켜라")
+    body = body[: len(body) - len(a["tail"].strip())].rstrip()
+    if body.startswith(a["opener"]):
+        body = b["opener"] + body[len(a["opener"]):]
+    pat = re.escape(a["accent"]).replace(re.escape("{x}"), "(.+?)")
+    body = re.sub(pat, lambda m: b["accent"].format(x=m.group(1)), body)
+    return body + b["tail"]
 
 
 DEFAULT_CLOTHING = ("a plain long-sleeved one-piece work garment covering the arms and legs fully, "
@@ -101,16 +237,22 @@ def _dur(c: dict) -> float:
     return float(c.get("need") or c["len"])
 
 
-def check(cuts: list[dict]) -> list[str]:
-    """컷 목록을 검사해 위반 문장 목록을 돌려준다. 비어 있으면 통과.
+def check(cuts: list[dict], diag_style: str = DEFAULT_STYLE) -> list[str]:
+    """컷 목록을 검사해 위반 문장 목록을 돌려준다. 비어 있으면 통과. diag_style = 이 편의 diag 스타일.
 
     각 컷: {"n": int, "len": 4|6|8|10, "kind": "diag"|"hist"|"real", "prompt": str, "need": float?}
     규칙마다 실제로 겪은 사고가 있다 — 지우지 말고 보태기만 할 것.
     """
     bad: list[str] = []
+    ep_style = diag_style
     for c in cuts:
         p, n, k = c["prompt"], c["n"], c.get("kind")
         tag = f"C{n:02d}"
+        # 컷별 스타일 (2026-11 사용자 원칙: 필요하면 한 편 안에서 그림체를 섞는다) — cuts.json "style"
+        diag_style = c.get("style") or ep_style
+        if diag_style not in DIAG_STYLES:
+            bad.append(f"{tag}: 스타일 '{diag_style}' 이 없다 (있는 것: {', '.join(DIAG_STYLES)})")
+            diag_style = ep_style
         # 01 숫자 — 엉뚱한 숫자를 그린다("3D"의 3은 예외)
         if re.search(r"\d", p.replace("3D", "")):
             bad.append(f"{tag}: 프롬프트에 숫자가 있다(엉뚱한 숫자를 그린다) — 자막으로 옮겨라")
@@ -126,8 +268,17 @@ def check(cuts: list[dict]) -> list[str]:
         if re.search(r"Any human figure", p, re.I):
             bad.append(f"{tag}: 'Any human figure' 조건문이 있다 — 이게 소환 주문이다. 꼬리에서 빼라")
         # 05 정본 꼬리 — 토씨 하나 다르면 걸린다 (diag 전체 · hist/real 은 고정 머리·꼬리)
-        if k == "diag" and not p.rstrip().endswith(diag_tail().strip()):
-            bad.append(f"{tag}: diag 꼬리가 정본과 다르다 — diag_tail() 을 그대로 붙여라")
+        if k == "diag" and not p.rstrip().endswith(diag_tail(diag_style).strip()):
+            other = [s for s in DIAG_STYLES if s != diag_style and p.rstrip().endswith(diag_tail(s).strip())]
+            bad.append(f"{tag}: diag 꼬리가 정본과 다르다 — diag_tail('{diag_style}') 을 그대로 붙여라"
+                       + (f" (지금 꼬리는 '{other[0]}' 스타일 — 이 컷만 그 스타일이면 cuts.json 에 \"style\": \"{other[0]}\")" if other else ""))
+        # 11 스타일 섞임 — 다른 스타일의 말이 본문에 남으면 그 스타일로 그린다
+        if k == "diag" and diag_style in _STYLE_CLASH:
+            body = p.rstrip()[: -len(diag_tail(diag_style).strip())] if p.rstrip().endswith(diag_tail(diag_style).strip()) else p
+            m = _STYLE_CLASH[diag_style].search(body)
+            if m:
+                bad.append(f"{tag}: '{m.group(1)}' 는 다른 스타일의 말이다({diag_style} 편) — "
+                           f"첫머리는 diag_opener(), 강조는 accent(대상, '{diag_style}') 로 써라")
         if k == "hist" and not (HIST_HEAD in p and p.rstrip().endswith(HIST_END)):
             bad.append(f"{tag}: hist 꼬리가 정본과 다르다 — hist_tail() 을 그대로 붙여라")
         if k == "real" and not (REAL_HEAD in p and p.rstrip().endswith(REAL_END)):

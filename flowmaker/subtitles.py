@@ -24,6 +24,7 @@ from .project import Project
 W, H = 720, 1280
 SIZE = 44
 STROKE = 7
+STROKE_IN = 2   # 글자 속 구멍 안쪽 외곽선
 BASE_Y = 1050
 LINE_GAP = 12
 MAXW = 530
@@ -86,10 +87,22 @@ def render(text: str, out: Path, f=None) -> None:
     lines = wrap(text, d, f)
     lh = SIZE + LINE_GAP
     top = BASE_Y - len(lines) * lh + LINE_GAP
-    for i, ln in enumerate(lines):
-        tw = d.textlength(ln, font=f)
-        d.text(((W - tw) / 2, top + i * lh), ln, font=f, fill=(255, 255, 255, 255),
-               stroke_width=STROKE, stroke_fill=(0, 0, 0, 255))
+    # 외곽선은 글자 바깥에만 두껍게(STROKE), 글자 속 구멍(ㅇ·ㅁ·ㅂ 안쪽)은 얇게(STROKE_IN) —
+    # 두꺼운 외곽선이 구멍을 검게 메워 '뚫린 것처럼' 보이던 문제(2026-11 gv90 사용자 지적)
+    fill_m = Image.new("L", (W, H), 0); thick = Image.new("L", (W, H), 0); thin = Image.new("L", (W, H), 0)
+    for m, sw in ((fill_m, 0), (thick, STROKE), (thin, STROKE_IN)):
+        md = ImageDraw.Draw(m)
+        for i, ln in enumerate(lines):
+            tw = md.textlength(ln, font=f)
+            md.text(((W - tw) / 2, top + i * lh), ln, font=f, fill=255, stroke_width=sw, stroke_fill=255)
+    outside = fill_m.copy()
+    ImageDraw.floodfill(outside, (0, 0), 128)             # 글자 바깥(테두리와 이어진 빈 곳) = 128, 글자 속 구멍 = 0 으로 남는다
+    hole = outside.point(lambda v: 255 if v == 0 else 0)
+    from PIL import ImageChops, ImageFilter
+    hole = hole.filter(ImageFilter.MaxFilter(3))           # 구멍 가장자리 반투명 픽셀까지
+    black = ImageChops.add(ImageChops.multiply(thick, ImageChops.invert(hole)), ImageChops.multiply(thin, hole))
+    im.paste((0, 0, 0, 255), (0, 0), black)
+    im.paste((255, 255, 255, 255), (0, 0), fill_m)
     im.save(out)
 
 
