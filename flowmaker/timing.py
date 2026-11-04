@@ -27,6 +27,9 @@ TEMPO_WARN = 1.30      # 이보다 크면 음이 올라간다 — 대본을 줄�
 TEMPO_MAX = 1.50       # 이보다 크면 거부
 
 
+TAG_RE = re.compile(r"\[[^\]]*\]\s*")   # eleven_v3 감정 태그 — script.txt 줄 맨 앞에만 둔다
+
+
 def build(project: Project, target: float | None = None, tempo: float | None = None) -> dict:
     lines = project.lines(project.script)
     if not project.alignment.exists():
@@ -57,11 +60,12 @@ def build(project: Project, target: float | None = None, tempo: float | None = N
     # 문장 경계 = 정렬값 ÷ 배속
     rows, pos = [], 0
     for i, ln in enumerate(lines, 1):
-        idx = flat.index(ln, pos)
-        a, b = st[idx] / tempo, en[idx + len(ln) - 1] / tempo
+        core = TAG_RE.sub("", ln).strip()             # 줄 앞 v3 감정 태그([excited] 등)는 소리가 아니다 — 문장 시각에서 뺀다
+        idx = flat.index(core, pos)
+        a, b = st[idx] / tempo, en[idx + len(core) - 1] / tempo
         rows.append({"i": i, "sentence": i, "start": round(a, 3), "end": round(b, 3),
-                     "dur": round(b - a, 3), "text": ln})
-        pos = idx + len(ln)
+                     "dur": round(b - a, 3), "text": core})
+        pos = idx + len(core)
 
     # 자막 문구 교체 (아라비아 숫자판)
     if project.subtitles.exists():

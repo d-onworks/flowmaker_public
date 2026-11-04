@@ -811,12 +811,27 @@ def _set_start_frame(page, img: Path, tag: str, shot, slot: str = "start") -> No
     label = "시작(Start)" if slot == "start" else "끝(End)"
     if not click_text(page, slot_rx, f"{tag} {label} 칸", 2000):
         shot(f"{tag}_no_{slot}_slot"); raise SystemExit(f"{tag} {label} 칸을 못 찾았다 — 보내지 않았다 (크레딧 0)")
-    hit = page.evaluate(_JS_FIND, r"Upload media|미디어 업로드")
-    if not hit:
-        shot(f"{tag}_no_dialog"); raise SystemExit("'Select a frame image' 창이 안 떴다 — 보내지 않았다")
-    with page.expect_file_chooser(timeout=10_000) as fc:
-        page.mouse.click(hit["x"], hit["y"])
-    fc.value.set_files(str(img))
+    # 업로드 버튼이 늦게 반응해 파일 선택 창이 10초 안에 안 뜨는 일이 연달아 있었다(2026-11 GV90 C11·C16) →
+    # 버튼을 다시 찾아 최대 3번, 20초씩 기다린다. 다 실패해도 보내기 전이라 크레딧 0.
+    chooser = None
+    for attempt in range(3):
+        page.wait_for_timeout(800 + attempt * 1200)
+        hit = page.evaluate(_JS_FIND, r"Upload media|미디어 업로드")
+        if not hit:
+            if attempt == 2:
+                shot(f"{tag}_no_dialog"); raise SystemExit("'Select a frame image' 창이 안 떴다 — 보내지 않았다")
+            click_text(page, slot_rx, f"{tag} {label} 칸(재시도)", 2000)
+            continue
+        try:
+            with page.expect_file_chooser(timeout=20_000) as fc:
+                page.mouse.click(hit["x"], hit["y"])
+            chooser = fc.value
+            break
+        except Exception as e:
+            _log(f"  {tag} {label} 파일 선택 창 대기 실패({attempt + 1}/3): {type(e).__name__} — 다시 시도")
+    if chooser is None:
+        shot(f"{tag}_no_chooser"); raise SystemExit(f"{tag} {label} 파일 선택 창이 세 번 다 안 떴다 — 보내지 않았다 (크레딧 0)")
+    chooser.set_files(str(img))
     page.wait_for_timeout(3000)
     if page.evaluate(_JS_FIND, r"^I agree$|^동의$"):
         shot(f"{tag}_rights")

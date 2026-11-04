@@ -29,7 +29,10 @@ def synthesize(project: Project) -> dict:
     lines = project.lines(project.script)
     flat = " ".join(lines)                      # 개행 대신 공백 — 한 테이크 유지
 
-    settings = {"stability": 0.45, "similarity_boost": 0.75, "style": 0.35, "use_speaker_boost": True}
+    # 편마다 감정 폭을 바꿀 수 있다 (2026-11 GV90 v4: "너무 일정하다" → stability↓ style↑, 줄 앞 [태그])
+    cfg = project.config()
+    settings = {"stability": float(cfg.get("tts_stability", 0.45)), "similarity_boost": 0.75,
+                "style": float(cfg.get("tts_style", 0.35)), "use_speaker_boost": True}
     if model != "eleven_v3":
         settings["speed"] = float(env.get("TTS_SPEED", "1.1"))
     body = json.dumps({"text": flat, "model_id": model, "voice_settings": settings}).encode()
